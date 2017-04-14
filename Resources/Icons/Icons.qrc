@@ -1,0 +1,26 @@
+<RCC>
+    <qresource prefix="/color">
+        <file>black.bmp</file>
+        <file>blue.bmp</file>
+        <file>cyan.bmp</file>
+        <file>gray.bmp</file>
+        <file>green.bmp</file>
+        <file>magenta.bmp</file>
+        <file>red.bmp</file>
+        <file>yellow.bmp</file>
+    </qresource>
+    <qresource prefix="/style">
+        <file>solid.png</file>
+        <file>dash.png</file>
+        <file>dash_dot.png</file>
+        <file>dash_dot_dot.png</file>
+        <file>dot.png</file>
+    </qresource>
+    <qresource prefix="/width">
+        <file>1.png</file>
+        <file>2.png</file>
+        <file>3.png</file>
+        <file>4.png</file>
+        <file>5.png</file>
+    </qresource>
+</RCC>
