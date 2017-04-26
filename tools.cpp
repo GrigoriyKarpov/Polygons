@@ -81,7 +81,12 @@ QVector<Point> Tools::lineSlipInCorner(Point a, Point b, Point c, double h) {
         rL = b;
         rF = b;
     } else {            //Угол < 90
+        double cor = qAcos(cos);
 
+        rL = distOnSegment(b, a, h / qTan(cor));
+        rG = distOnSegment(b, c, h / qSin(cor));
+        rF = distOnSegment(b, c, h / qTan(cor));
+        rK = distOnSegment(b, a, h / qSin(cor));
     }
 
     //Возвращаем массив из 4-х точек
@@ -101,8 +106,8 @@ Point Tools::distOnSegment(Point a, Point b, double h) {
     double tmp = qPow(b.getY() - a.getY(), 2) / qPow(b.getX() - a.getX(), 2);
 
     //Находим Qx
-    double Qx1 = a.getX() - qPow(h, 2) / qSqrt(tmp + 1);
-    double Qx2 = a.getX() + qPow(h, 2) / qSqrt(tmp + 1);
+    double Qx1 = a.getX() - h / qSqrt(tmp + 1);
+    double Qx2 = a.getX() + h / qSqrt(tmp + 1);
 
     //Выбирам координату, которая лежит между координатами точек отрезка
     if(((a.getX() <= b.getX()) && (Qx1 <= b.getX()) && (Qx1 >= a.getX())) ||
@@ -113,16 +118,8 @@ Point Tools::distOnSegment(Point a, Point b, double h) {
     }
 
     //Находим Qy
-    double Qy1 = a.getY() - qSqrt(qPow(h, 2) - qPow(a.getX() - Q.getX(), 2));
-    double Qy2 = a.getY() + qSqrt(qPow(h, 2) - qPow(a.getX() - Q.getX(), 2));
-
-    //Выбирам координату, которая лежит между координатами точек отрезка
-    if(((a.getY() <= b.getY()) && (Qy1 <= b.getY()) && (Qy1 >= a.getY())) ||
-            ((a.getY() >= b.getY()) && (Qy1 >= b.getY()) && (Qy1 <= a.getY()))) {
-        Q.setY(Qy1);
-    } else {
-        Q.setY(Qy2);
-    }
+    double Qy = a.getY() + (((Q.getX() - a.getX()) * (b.getY() - a.getY())) / (b.getX() - a.getX()));
+    Q.setY(Qy);
 
     return Q;
 }
@@ -132,13 +129,14 @@ double Tools::cos(Point a, Point b, Point c) {
     Point v1 = Point(a.getX() - b.getX(), a.getY() - b.getY());
     Point v2 = Point(c.getX() - b.getX(), c.getY() - b.getY());
 
-    double result = (v1.getX() * v2.getX() + v1.getX() * v2.getX()) /
+    double result = (v1.getX() * v2.getX() + v1.getY() * v2.getY()) /
             (qSqrt(qPow(v1.getX(), 2) + qPow(v1.getY(), 2)) *
              qSqrt(qPow(v2.getX(), 2) + qPow(v2.getY(), 2)));
 
     return result;
 }
 
+//расстояние между двумя точками
 double Tools::dist(Point a, Point b) {
     return qSqrt(qPow((a.getX() - b.getX()), 2) +
                  qPow((a.getY() - b.getY()),2));
