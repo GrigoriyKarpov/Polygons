@@ -42,6 +42,11 @@ Window::Window() : QWidget()
 
     //
     connect(saveBtn, SIGNAL(clicked()), this, SLOT(saveBtnClick()));
+
+
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), widgetOpenGL, SLOT(animate()));
+    timer->start(1);
 }
 
 void Window::optionBtnClick() {

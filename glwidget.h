@@ -14,12 +14,13 @@ class GLWidget : public QGLWidget
 
 public:
     GLWidget(QWidget *parent);
-    enum Modes {Draw, Edit};
+    enum Modes {Draw, Edit, Demo};
     QPen getPolygonPen();
     void setMode(GLWidget::Modes mode);
 
 public slots:
     void recieveOptions(QPen pen);
+    void animate();
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -28,9 +29,12 @@ protected:
     void mouseReleaseEvent(QMouseEvent *me);    // Метод реагирует на "отжатие" кнопки мыши
 
 private:
-    //ширина и высота виджета
+    //Ширина и высота виджета
     int height;
     int width;
+
+    //Таймер для анимации
+    int elapsed;
 
     //Текущие координаты мыши на виджете
     int cax;

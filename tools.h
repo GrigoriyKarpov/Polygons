@@ -45,7 +45,7 @@ public:
     static QVector<Point> lineSlipInCorner(Point a, Point b, Point c, double h);
     static double dist(Point a, Point b);
     static double cos(Point a, Point b, Point c);
-    static Point distOnSegment(Point a, Point b, double h);
+    static Point distOnSegment(Point a, Point b, Point c, double h);
 };
 
 #endif // TOOLS_H

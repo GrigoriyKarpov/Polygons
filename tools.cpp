@@ -75,18 +75,18 @@ QVector<Point> Tools::lineSlipInCorner(Point a, Point b, Point c, double h) {
 
     if (cos <= 0) {     //Угол >= 90
         //Откладываем точки на отрезках угла согласно расстоянию h
-        rK = distOnSegment(b, a, h);
-        rG = distOnSegment(b, c, h);
+        rK = distOnSegment(b, a, b, h);
+        rG = distOnSegment(b, c, b, h);
 
         rL = b;
         rF = b;
     } else {            //Угол < 90
         double cor = qAcos(cos);
 
-        rL = distOnSegment(b, a, h / qTan(cor));
-        rG = distOnSegment(b, c, h / qSin(cor));
-        rF = distOnSegment(b, c, h / qTan(cor));
-        rK = distOnSegment(b, a, h / qSin(cor));
+        rL = distOnSegment(b, a, b, h / qTan(cor));
+        rG = distOnSegment(b, c, b, h / qSin(cor));
+        rF = distOnSegment(b, c, b, h / qTan(cor));
+        rK = distOnSegment(b, a, b, h / qSin(cor));
     }
 
     //Возвращаем массив из 4-х точек
@@ -99,15 +99,19 @@ QVector<Point> Tools::lineSlipInCorner(Point a, Point b, Point c, double h) {
     return result;
 }
 
-//Функция откладывает расстояние h на отрезке [a;b] от точки а
-Point Tools::distOnSegment(Point a, Point b, double h) {
+//Функция вычисляет пересечение отрезка [a;b] и окружности с центром в точке c и радиусом h
+Point Tools::distOnSegment(Point a, Point b, Point c, double h) {
     Point Q;
 
-    double tmp = qPow(b.getY() - a.getY(), 2) / qPow(b.getX() - a.getX(), 2);
+    double t = (b.getY() - a.getY()) / (b.getX() - c.getX());
+    double k = a.getY() - c.getY();
+    double m = a.getX() - c.getX();
+
+    double tmp = qSqrt(2 * t * k * m - qPow(t * m, 2) + qPow(h, 2) - qPow(k, 2) + qPow(h * t, 2));
 
     //Находим Qx
-    double Qx1 = a.getX() - h / qSqrt(tmp + 1);
-    double Qx2 = a.getX() + h / qSqrt(tmp + 1);
+    double Qx1 = (a.getX() * qPow(t, 2) - k * t + c.getX() - tmp) / (qPow(t, 2) + 1);
+    double Qx2 = (a.getX() * qPow(t, 2) - k * t  + c.getX() + tmp) / (qPow(t, 2) + 1);
 
     //Выбирам координату, которая лежит между координатами точек отрезка
     if(((a.getX() <= b.getX()) && (Qx1 <= b.getX()) && (Qx1 >= a.getX())) ||

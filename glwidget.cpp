@@ -1,5 +1,7 @@
 #include <QtGui>
 #include "glwidget.h"
+#include "tools.h"
+
 
 #include <QPainter>
 #include <QtCore/qmath.h>
@@ -14,7 +16,6 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
 
     setFixedSize(width, height);
     setMouseTracking(true);
-    setCursor(Qt::CrossCursor);
 
     //Инициализация переменных
     cax = 0;
@@ -25,7 +26,7 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
 
     crossroad = false;
     leftBtn = false;
-    mode = Draw;
+    mode = Demo;
 
     textPen = QPen(QColor(96, 96, 96));
     textFont.setPixelSize(12);
@@ -44,6 +45,74 @@ void GLWidget::paintEvent(QPaintEvent *event)
     //painter.translate(300, 300);
 
     painter.save();
+
+    if (mode == Draw) {
+        setCursor(Qt::CrossCursor);
+    }
+
+    if (mode == Demo) {
+        Point  a = Point(150.2, 280.4);
+        Point  b = Point(10.2, 20.1);
+        Point  c = Point(380.2, 28.6);
+        double h = 200.0;
+
+        painter.setPen(polygonPen);
+
+        painter.drawLine(a.getX(), height - a.getY(), b.getX(), height - b.getY());
+        painter.drawLine(b.getX(), height - b.getY(), c.getX(), height - c.getY());
+
+        QPen pointPen = polygonPen;
+        pointPen.setWidth(polygonPen.width() + 3);
+        painter.setPen(pointPen);
+
+        painter.drawPoint(a.getX(), height - a.getY());
+        painter.drawPoint(b.getX(), height - b.getY());
+        painter.drawPoint(c.getX(), height - c.getY());
+
+        QVector<Point> points = Tools::lineSlipInCorner(a, b, c, h);
+
+        for (int i = 0; i < points.count(); i++) {
+            painter.drawPoint(points[i].getX(), height - points[i].getY());
+        }
+
+        QPen hPen = polygonPen;
+        hPen.setWidth(2);
+        hPen.setColor(Qt::gray);
+        painter.setPen(hPen);
+
+        painter.drawLine(points[0].getX(), height - points[0].getY(),
+                points[2].getX(), height - points[2].getY());
+        painter.drawLine(points[1].getX(), height - points[1].getY(),
+                points[3].getX(), height - points[3].getY());
+
+
+        // Скользящий отрезок
+        QPen lPen = polygonPen;
+        lPen.setWidth(2);
+        lPen.setColor(Qt::red);
+        painter.setPen(lPen);
+
+        Point q = Tools::distOnSegment(points[0], points[1], points[0], elapsed);
+        Point r = Tools::distOnSegment(points[2], points[3], q, h);
+
+        painter.drawLine(q.getX(), height - q.getY(),
+                         r.getX(), height - r.getY());
+
+        if (qPow(q.getX() - points[1].getX(), 2) +
+                qPow(q.getY() - points[1].getY(), 2) < 1) {
+            elapsed = 0;
+        }
+
+        //Текст
+        painter.setPen(textPen);
+        painter.setFont(textFont);
+        painter.drawText(QRect(200,  2, 100, 16), Qt::AlignLeft,
+                         "time: " + QString::number(elapsed));
+        painter.drawText(QRect(200,  20, 100, 16), Qt::AlignLeft,
+                         "h: " + QString::number(Tools::dist(q, r)));
+        /*painter.drawText(QRect(200,  40, 100, 16), Qt::AlignLeft,
+                         "y: " + QString::number(q.getY()));*/
+    }
 
 
     //Рисуем полигон
@@ -71,7 +140,7 @@ void GLWidget::paintEvent(QPaintEvent *event)
             painter.drawLine(points[0][0], height - points[0][1],
                              points[points.count() - 1][0],
                     height - points[points.count() - 1][1]);
-        } else {
+        } else if (mode == Draw) {
             if (crossroad) {
                 painter.setPen(crossroadPen);
             } else {
@@ -106,6 +175,8 @@ void GLWidget::paintEvent(QPaintEvent *event)
     QString modeName = "Mode: Draw";
     if (mode == Edit) {
         modeName = "Mode: Edit";
+    } else if (mode == Demo) {
+        modeName = "Mode: Demo";
     }
     painter.drawText(QRect(4, 2, 100, 16), Qt::AlignLeft, modeName);
 
@@ -122,6 +193,13 @@ void GLWidget::paintEvent(QPaintEvent *event)
 
     update();
 
+}
+
+//Анимация
+void GLWidget::animate()
+{
+    elapsed = (elapsed + qobject_cast<QTimer*>(sender())->interval()) % 300; //Каждые 300 у.е. происходит сброс таймера на 0 и он работает в цикле
+    repaint();
 }
 
 void GLWidget::setMode(GLWidget::Modes mode) {
@@ -198,6 +276,9 @@ void GLWidget::mouseMoveEvent(QMouseEvent *me) {
     QVector<int> tmp;
     tmp = points.value(0);
 
+    cax = me->x();
+    cay = height - me->y();
+
     if (mode == Draw) {
         if (points.count() > 2) {
             if (qPow(tmp.value(0) - me->x(), 2) +
@@ -208,9 +289,6 @@ void GLWidget::mouseMoveEvent(QMouseEvent *me) {
                 cay = tmp.value(1);
             } else {
                 activePoint = -1;
-
-                cax = me->x();
-                cay = height - me->y();
             }
 
             //Проверка на пересечение
@@ -221,14 +299,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *me) {
                 crossroad = false;
                 setCursor(Qt::CrossCursor);
             }
-        } else {
-            cax = me->x();
-            cay = height - me->y();
         }
-    } else {
-        cax = me->x();
-        cay = height - me->y();
-
+    } else if (mode == Edit) {
         //Проверить нет ли точек поблизоти курсора и выделить ближайшую точку
         for (int i = 0; i < points.count(); i++) {
             QVector<int> tmp = points.value(i);
@@ -301,7 +373,7 @@ void GLWidget::mousePressEvent(QMouseEvent *me) {
                     points.push_back(tmp);
                 }
             }
-        } else {
+        } else if (mode == Edit) {
             if (activePoint != -1) {
                 setCursor(Qt::ClosedHandCursor);
             }
