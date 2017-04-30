@@ -46,6 +46,7 @@ public:
     static double dist(Point a, Point b);
     static double cos(Point a, Point b, Point c);
     static Point distOnSegment(Point a, Point b, Point c, double h);
+    static Point transformCS(Point p, Point o, double a);
 };
 
 #endif // TOOLS_H

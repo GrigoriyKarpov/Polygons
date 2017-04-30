@@ -128,6 +128,19 @@ Point Tools::distOnSegment(Point a, Point b, Point c, double h) {
     return Q;
 }
 
+//Преобразование системы координат
+Point Tools::transformCS(Point p, Point o, double a) {
+    Point result;
+    a = M_PI * a / 180;
+    double cos = qCos(a);
+    double sin = qSin(a);
+
+    result.setX((p.getX() - o.getX()) * cos + (p.getY() - o.getY()) * sin);
+    result.setY((p.getY() - o.getY()) * cos - (p.getX() - o.getX()) * sin);
+
+    return result;
+}
+
 //Косинус угла abc
 double Tools::cos(Point a, Point b, Point c) {
     Point v1 = Point(a.getX() - b.getX(), a.getY() - b.getY());

@@ -7,12 +7,16 @@
 #include <QtCore/qmath.h>
 #include <algorithm>
 #include <QCursor>
+#include <QDebug>
 
 GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {
     //Настройки виджета
     height = 300;
     width = 400;
+
+    gX = 0;
+    gY = 0;
 
     setFixedSize(width, height);
     setMouseTracking(true);
@@ -51,67 +55,91 @@ void GLWidget::paintEvent(QPaintEvent *event)
     }
 
     if (mode == Demo) {
-        Point  a = Point(150.2, 280.4);
-        Point  b = Point(10.2, 20.1);
-        Point  c = Point(380.2, 28.6);
-        double h = 200.0;
+        //--------------------- Расчеты ---------------------//
+        //Начальные параметры. Три вершины образуют угол (abc)
+        Point  a0 = Point(340.8, 70.6);
+        Point  b0 = Point(10.2, 20.1);
+        Point  c0 = Point(300.3, 320.4);
+        double h = 150.0; //Длина сользящего отрезка
 
+        //Преобразуем систему координат
+        double angleCS = 180 * qAtan((a0.getY() - b0.getY()) / (a0.getX() - b0.getX())) / M_PI;
+
+        Point a = Tools::transformCS(a0, b0, angleCS);
+        Point b = Tools::transformCS(b0, b0, angleCS);
+        Point c = Tools::transformCS(c0, b0, angleCS);
+
+        // Скользящий отрезок
+        Point r; //Скользит по [b,a]
+        Point q; //Скользит по [b,c]
+
+        double angle = (M_PI * elapsed / 180.0) / 3; //Отрезок вращается с анимацией
+        double sin   = qSin(angle);
+        double cos   = qCos(angle);
+        double ctg   = a.getX() / c.getY();
+
+        r.setX(h * (sin * ctg + cos));
+
+        //Сброс анимации при крайнем положении (отрезок достиг угла)
+        if (Tools::dist(r, b) < 1) {
+            elapsed = 0;
+        }
+
+        q.setX(h * sin * ctg);
+        q.setY(h * sin);
+
+        //3-я вершина
+        Point t; //Третья вершина
+        Point m; //Основание перпендикуляра
+        double d1 = 60.0; //Раст от верш. скользящего отрезка до основания
+        double d2 = 40.0; //Длина перпендикуляра
+
+        m.setX(r.getX() + d1 * cos);
+        m.setY(h - d1 * sin);
+
+        t.setX(m.getX() + d2 * sin);
+        t.setY(m.getY() + d2 * cos);
+
+        //--------------------- Визуализация ---------------------//
+        //Угол
         painter.setPen(polygonPen);
-
         painter.drawLine(a.getX(), height - a.getY(), b.getX(), height - b.getY());
         painter.drawLine(b.getX(), height - b.getY(), c.getX(), height - c.getY());
 
-        QPen pointPen = polygonPen;
-        pointPen.setWidth(polygonPen.width() + 3);
-        painter.setPen(pointPen);
+        //Рисуем отрезок
+        painter.setPen(QPen(Qt::red, 2, Qt::SolidLine));
 
+        painter.drawLine(q.getX(), height - q.getY(),
+                                 r.getX(), height - r.getY());
+
+        /*painter.drawLine(q.getX(), height - q.getY(),
+                         t.getX(), height - t.getY());
+        painter.drawLine(r.getX(), height - r.getY(),
+                         t.getX(), height - t.getY());
+*/
+
+
+        //Рисуем вершины...
+        painter.setPen(QPen(Qt::black, 8, Qt::SolidLine, Qt::RoundCap));
+
+        //...угла
         painter.drawPoint(a.getX(), height - a.getY());
         painter.drawPoint(b.getX(), height - b.getY());
         painter.drawPoint(c.getX(), height - c.getY());
 
-        QVector<Point> points = Tools::lineSlipInCorner(a, b, c, h);
+        //...отрезка
+        painter.drawPoint(r.getX(), height - r.getY());
+        painter.drawPoint(q.getX(), height - q.getY());
 
-        for (int i = 0; i < points.count(); i++) {
-            painter.drawPoint(points[i].getX(), height - points[i].getY());
-        }
-
-        QPen hPen = polygonPen;
-        hPen.setWidth(2);
-        hPen.setColor(Qt::gray);
-        painter.setPen(hPen);
-
-        painter.drawLine(points[0].getX(), height - points[0].getY(),
-                points[2].getX(), height - points[2].getY());
-        painter.drawLine(points[1].getX(), height - points[1].getY(),
-                points[3].getX(), height - points[3].getY());
-
-
-        // Скользящий отрезок
-        QPen lPen = polygonPen;
-        lPen.setWidth(2);
-        lPen.setColor(Qt::red);
-        painter.setPen(lPen);
-
-        Point q = Tools::distOnSegment(points[0], points[1], points[0], elapsed);
-        Point r = Tools::distOnSegment(points[2], points[3], q, h);
-
-        painter.drawLine(q.getX(), height - q.getY(),
-                         r.getX(), height - r.getY());
-
-        if (qPow(q.getX() - points[1].getX(), 2) +
-                qPow(q.getY() - points[1].getY(), 2) < 1) {
-            elapsed = 0;
-        }
+        //...перпендикуляра
+        painter.drawPoint(m.getX(), height - m.getY());
+        painter.drawPoint(t.getX(), height - t.getY());
 
         //Текст
         painter.setPen(textPen);
         painter.setFont(textFont);
         painter.drawText(QRect(200,  2, 100, 16), Qt::AlignLeft,
                          "time: " + QString::number(elapsed));
-        painter.drawText(QRect(200,  20, 100, 16), Qt::AlignLeft,
-                         "h: " + QString::number(Tools::dist(q, r)));
-        /*painter.drawText(QRect(200,  40, 100, 16), Qt::AlignLeft,
-                         "y: " + QString::number(q.getY()));*/
     }
 
 
@@ -198,7 +226,7 @@ void GLWidget::paintEvent(QPaintEvent *event)
 //Анимация
 void GLWidget::animate()
 {
-    elapsed = (elapsed + qobject_cast<QTimer*>(sender())->interval()) % 300; //Каждые 300 у.е. происходит сброс таймера на 0 и он работает в цикле
+    elapsed = (elapsed + qobject_cast<QTimer*>(sender())->interval()) % 1000; //Каждые 300 у.е. происходит сброс таймера на 0 и он работает в цикле
     repaint();
 }
 

@@ -29,6 +29,9 @@ protected:
     void mouseReleaseEvent(QMouseEvent *me);    // Метод реагирует на "отжатие" кнопки мыши
 
 private:
+    int gX;
+    int gY;
+
     //Ширина и высота виджета
     int height;
     int width;
@@ -57,7 +60,8 @@ private:
 
     //Массив добавленных вершин
     QVector <QVector <int> > points;
-
+    QVector<double> v;
+    QVector<double> v2;
     //Индекс точки, на которую наведен курсор (по умолчанию -1)
     int activePoint;
 
