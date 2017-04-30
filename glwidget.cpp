@@ -94,7 +94,7 @@ void GLWidget::paintEvent(QPaintEvent *event)
         double d1 = 60.0; //Раст от верш. скользящего отрезка до основания
         double d2 = 40.0; //Длина перпендикуляра
 
-        m.setX(r.getX() + d1 * cos);
+        m.setX(q.getX() + d1 * cos);
         m.setY(h - d1 * sin);
 
         t.setX(m.getX() + d2 * sin);
@@ -133,7 +133,7 @@ void GLWidget::paintEvent(QPaintEvent *event)
 
         //...перпендикуляра
         painter.drawPoint(m.getX(), height - m.getY());
-        painter.drawPoint(t.getX(), height - t.getY());
+        //painter.drawPoint(t.getX(), height - t.getY());
 
         //Текст
         painter.setPen(textPen);
