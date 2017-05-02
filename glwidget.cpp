@@ -2,7 +2,6 @@
 #include "glwidget.h"
 #include "tools.h"
 
-
 #include <QPainter>
 #include <QtCore/qmath.h>
 #include <algorithm>
@@ -12,11 +11,8 @@
 GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {
     //Настройки виджета
-    height = 300;
-    width = 400;
-
-    gX = 0;
-    gY = 0;
+    height = 600;
+    width = 800;
 
     setFixedSize(width, height);
     setMouseTracking(true);
@@ -25,9 +21,17 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
     cax = 0;
     cay = 0;
 
+    gX = 0;
+    gY = 0;
+    cbx = 0;
+    cby = 0;
+    ccx = 0;
+    ccy = 0;
+
     active = 8;         //По умолчанию = 8
     activePoint = -1;
 
+    move = false;
     crossroad = false;
     leftBtn = false;
     mode = Demo;
@@ -45,103 +49,108 @@ void GLWidget::paintEvent(QPaintEvent *event)
     painter.begin(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    painter.fillRect(0, 0, 400, 300, QBrush(Qt::white));
+    painter.fillRect(0, 0, width, height, QBrush(Qt::white));
     //painter.translate(300, 300);
 
     painter.save();
 
-    if (mode == Draw) {
-        setCursor(Qt::CrossCursor);
-    }
-
     if (mode == Demo) {
-        //--------------------- Расчеты ---------------------//
-        //Начальные параметры. Три вершины образуют угол (abc)
-        Point  a0 = Point(340.8, 70.6);
-        Point  b0 = Point(10.2, 20.1);
-        Point  c0 = Point(300.3, 320.4);
-        double h = 150.0; //Длина сользящего отрезка
+        //--------------------- Инициализация переменных ---------------------//
+        Point  a = Point(650.0, 100.0);
+        Point  b = Point(150.0, 150.0);
+        Point  c = Point(450.0, 550.0);
+        double h = 100.0;                              //Длина сользящего отрезка
+        double d1 = 50.0;                              //Раст от верш. скользящего отрезка до основания перпендикуляра
+        double d2 = 300.0;                             //Длина перпендикуляра
+        double angle = (M_PI * elapsed / 180.0) * 0.7; //Отрезок вращается с анимацией
 
-        //Преобразуем систему координат
-        double angleCS = 180 * qAtan((a0.getY() - b0.getY()) / (a0.getX() - b0.getX())) / M_PI;
+        QVector<Point> tmp = Tools::slipInAngle(a, b, c, h, angle, d1, d2);
 
-        Point a = Tools::transformCS(a0, b0, angleCS);
-        Point b = Tools::transformCS(b0, b0, angleCS);
-        Point c = Tools::transformCS(c0, b0, angleCS);
+        Point r = tmp[0];  //Скользит по [b,a]
+        Point q = tmp[1];  //Скользит по [b,c]
+        Point t = tmp[2];  //Третья вершина
+        path.push_back(t); //Траектория
 
-        // Скользящий отрезок
-        Point r; //Скользит по [b,a]
-        Point q; //Скользит по [b,c]
+        //Точки пересечения траектории и угла
+        int acc = 5; //Точность
+        if (inter.count() < 2 && path.count() > acc) {
+            int k = path.count() - 1;
+            Point res;
 
-        double angle = (M_PI * elapsed / 180.0) / 3; //Отрезок вращается с анимацией
-        double sin   = qSin(angle);
-        double cos   = qCos(angle);
-        double ctg   = a.getX() / c.getY();
-
-        r.setX(h * (sin * ctg + cos));
-
-        //Сброс анимации при крайнем положении (отрезок достиг угла)
-        if (Tools::dist(r, b) < 1) {
-            elapsed = 0;
+            if (inter.count() == 0 && Tools::intersection(b, c, path[k], path[k - acc], &res)) {
+                inter.push_back(res);
+            }
+            if (Tools::intersection(b, a, path[k], path[k - acc], &res)) {
+                inter.push_back(res);
+            }
         }
 
-        q.setX(h * sin * ctg);
-        q.setY(h * sin);
-
-        //3-я вершина
-        Point t; //Третья вершина
-        Point m; //Основание перпендикуляра
-        double d1 = 60.0; //Раст от верш. скользящего отрезка до основания
-        double d2 = 40.0; //Длина перпендикуляра
-
-        m.setX(q.getX() + d1 * cos);
-        m.setY(h - d1 * sin);
-
-        t.setX(m.getX() + d2 * sin);
-        t.setY(m.getY() + d2 * cos);
+        //Сброс анимации при
+        if (angle > M_PI - qAcos(Tools::cos(a, b, c))) {
+            elapsed = 0;
+            path.clear();
+            inter.clear();
+        }
 
         //--------------------- Визуализация ---------------------//
         //Угол
         painter.setPen(polygonPen);
-        painter.drawLine(a.getX(), height - a.getY(), b.getX(), height - b.getY());
-        painter.drawLine(b.getX(), height - b.getY(), c.getX(), height - c.getY());
+        painter.drawLine(a.getX() + gX, height - a.getY() + gY,
+                         b.getX() + gX, height - b.getY() + gY);
+        painter.drawLine(b.getX() + gX, height - b.getY() + gY,
+                         c.getX() + gX, height - c.getY() + gY);
 
-        //Рисуем отрезок
+        //Отрезок
         painter.setPen(QPen(Qt::red, 2, Qt::SolidLine));
+        painter.drawLine(q.getX() + gX, height - q.getY() + gY,
+                         r.getX() + gX, height - r.getY() + gY);
 
-        painter.drawLine(q.getX(), height - q.getY(),
-                                 r.getX(), height - r.getY());
+        //Отрезки до третьей вершины
+        painter.setPen(QPen(Qt::red, 2, Qt::DotLine));
+        painter.drawLine(q.getX() + gX, height - q.getY() + gY,
+                         t.getX() + gX, height - t.getY() + gY);
+        painter.drawLine(r.getX() + gX, height - r.getY() + gY,
+                         t.getX() + gX, height - t.getY() + gY);
 
-        /*painter.drawLine(q.getX(), height - q.getY(),
-                         t.getX(), height - t.getY());
-        painter.drawLine(r.getX(), height - r.getY(),
-                         t.getX(), height - t.getY());
-*/
+        //Траектория
+        if (path.count() > 1) {
+            painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine));
+            for (int i = 0; i < path.count() - 1; i++) {
+                painter.drawLine(path[i].getX() + gX, height - path[i].getY() + gY,
+                                 path[i + 1].getX() + gX, height - path[i + 1].getY() + gY);
+            }
+        }
 
-
-        //Рисуем вершины...
+        //Вершины...
         painter.setPen(QPen(Qt::black, 8, Qt::SolidLine, Qt::RoundCap));
 
         //...угла
-        painter.drawPoint(a.getX(), height - a.getY());
-        painter.drawPoint(b.getX(), height - b.getY());
-        painter.drawPoint(c.getX(), height - c.getY());
+        painter.drawPoint(a.getX() + gX, height - a.getY() + gY);
+        painter.drawPoint(b.getX() + gX, height - b.getY() + gY);
+        painter.drawPoint(c.getX() + gX, height - c.getY() + gY);
 
         //...отрезка
-        painter.drawPoint(r.getX(), height - r.getY());
-        painter.drawPoint(q.getX(), height - q.getY());
+        painter.drawPoint(r.getX() + gX, height - r.getY() + gY);
+        painter.drawPoint(q.getX() + gX, height - q.getY() + gY);
 
-        //...перпендикуляра
-        painter.drawPoint(m.getX(), height - m.getY());
-        //painter.drawPoint(t.getX(), height - t.getY());
+        //Третья точка
+        painter.drawPoint(t.getX() + gX, height - t.getY() + gY);
+
+        //Точки пересечения траектории
+        if (inter.count() > 0) {
+            painter.setPen(QPen(Qt::red, 12, Qt::SolidLine, Qt::RoundCap));
+            for (int i = 0; i < inter.count(); i++) {
+                painter.drawPoint(inter[i].getX() + gX, height - inter[i].getY() + gY);
+            }
+        }
 
         //Текст
         painter.setPen(textPen);
         painter.setFont(textFont);
-        painter.drawText(QRect(200,  2, 100, 16), Qt::AlignLeft,
+        //Текущий кадр
+        painter.drawText(QRect(width / 2 - 50,  2, 100, 16), Qt::AlignLeft,
                          "time: " + QString::number(elapsed));
     }
-
 
     //Рисуем полигон
     if (points.count() > 0) {
@@ -149,25 +158,26 @@ void GLWidget::paintEvent(QPaintEvent *event)
         pointPen.setWidth(polygonPen.width() + 3);
 
         painter.setPen(pointPen);
-        painter.drawPoint(points[0][0], height - points[0][1]);
+        painter.drawPoint(points[0][0] + gX, height - points[0][1] + gY);
         painter.setPen(polygonPen);
 
         if (points.count() > 1) {
             for (int i = 0; i < points.count() - 1; i++) {
-                painter.drawLine(points[i][0], height - points[i][1],
-                                 points[i + 1][0], height - points[i + 1][1]);
+                painter.drawLine(points[i][0] + gX, height - points[i][1] + gY,
+                                 points[i + 1][0] + gX, height - points[i + 1][1] + gY);
 
                 painter.setPen(pointPen);
-                painter.drawPoint(points[i + 1][0], height - points[i + 1][1]);
+                painter.drawPoint(points[i + 1][0] + gX, height - points[i + 1][1] + gY);
                 painter.setPen(polygonPen);
             }
         }
 
         //Как рисовать последнию линию (в начало или к курсору) — зависит от текщего режима
         if (mode == Edit) {
-            painter.drawLine(points[0][0], height - points[0][1],
-                             points[points.count() - 1][0],
-                    height - points[points.count() - 1][1]);
+            painter.drawLine(points[0][0] + gX,
+                             height - points[0][1] + gY,
+                             points[points.count() - 1][0] + gX,
+                             height - points[points.count() - 1][1] + gY);
         } else if (mode == Draw) {
             if (crossroad) {
                 painter.setPen(crossroadPen);
@@ -175,8 +185,10 @@ void GLWidget::paintEvent(QPaintEvent *event)
                 painter.setPen(polygonPen);
             }
 
-            painter.drawLine(points[points.count() - 1][0],
-                    height - points[points.count() - 1][1], cax, height - cay);
+            painter.drawLine(points[points.count() - 1][0] + gX,
+                    height - points[points.count() - 1][1] + gY,
+                    cax + gX,
+                    cay + gY);
         }
 
         //Нарисовать выделение вокруг активной точки
@@ -185,8 +197,8 @@ void GLWidget::paintEvent(QPaintEvent *event)
             painter.setPen(circlePen);
             QVector<int> tmp3 = points.value(activePoint);
 
-            painter.drawEllipse(tmp3.value(0) - active,
-                                (height - tmp3.value(1)) - active,
+            painter.drawEllipse(tmp3.value(0) - active + gX,
+                                (height - tmp3.value(1)) - active + gY,
                                 active * 2, active * 2);
         }
     }
@@ -194,26 +206,30 @@ void GLWidget::paintEvent(QPaintEvent *event)
     //Выводим координаты
     painter.setPen(textPen);
     painter.setFont(textFont);
-    painter.drawText(QRect(362,  2, 38, 16), Qt::AlignLeft,
+    painter.drawText(QRect(width - 38,  2, 38, 16), Qt::AlignLeft,
                      "x: " + QString::number(cax));
-    painter.drawText(QRect(362, 18, 38, 16), Qt::AlignLeft,
-                     "y: " + QString::number(cay));
+    painter.drawText(QRect(width - 38, 18, 38, 16), Qt::AlignLeft,
+                     "y: " + QString::number(height - cay));
 
     //Вывод текущего режима
     QString modeName = "Mode: Draw";
-    if (mode == Edit) {
+    if (mode == Draw) {
+        modeName = "Mode: Draw";
+    } else if (mode == Edit) {
         modeName = "Mode: Edit";
     } else if (mode == Demo) {
         modeName = "Mode: Demo";
+    } if (move) {
+        modeName = modeName + "/Move";
     }
-    painter.drawText(QRect(4, 2, 100, 16), Qt::AlignLeft, modeName);
+
+    painter.drawText(QRect(4, 2, 150, 16), Qt::AlignLeft, modeName);
 
     //Вывод ошибки
     if (crossroad) {
-        QString errorLine = "Error: lines must not intersect";
-
+        QString errorMessage = "Warning: lines must not intersect!";
         painter.setPen(QPen(QColor(255, 64, 64)));
-        painter.drawText(QRect(4, 284, 400, 16), Qt::AlignLeft, errorLine);
+        painter.drawText(QRect(4, height - 16, 400, 16), Qt::AlignLeft, errorMessage);
     }
 
     painter.save();
@@ -233,18 +249,40 @@ void GLWidget::animate()
 void GLWidget::setMode(GLWidget::Modes mode) {
     if (mode == Draw) {
         this->mode = mode;
+        this->move = false;
         crossroad = false;
         activePoint = -1;
         points.clear();
         setCursor(Qt::CrossCursor);
-    } else {
+    } else if (mode == Edit) {
         this->mode = mode;
+        this->move = false;
         if (isCrossroad()) {
             crossroad = true;
         } else {
             crossroad = false;
         }
         setCursor(Qt::ArrowCursor);
+    } else if (mode == Demo) {
+        this->mode = mode;
+        points.clear();
+        this->move = false;
+        setCursor(Qt::ArrowCursor);
+    } else if (mode == Move) {
+        if (this->move != true) {
+            this->move = true;
+            setCursor(Qt::OpenHandCursor);
+        } else {
+            this->move = false;
+
+            if (this->mode == Draw) {
+                setCursor(Qt::CrossCursor);
+            } else if (this->mode == Edit) {
+                setCursor(Qt::ArrowCursor);
+            } else if (this->mode == Demo) {
+                setCursor(Qt::ArrowCursor);
+            }
+        }
     }
 }
 
@@ -281,7 +319,7 @@ bool GLWidget::isCrossroad() {
                     y22 = points[0][1];
                 } else {
                     x22 = cax;
-                    y22 = cay;
+                    y22 = (height - cay);
                 }
             }
 
@@ -302,83 +340,94 @@ bool GLWidget::isCrossroad() {
 
 void GLWidget::mouseMoveEvent(QMouseEvent *me) {
     QVector<int> tmp;
-    tmp = points.value(0);
 
-    cax = me->x();
-    cay = height - me->y();
-
-    if (mode == Draw) {
-        if (points.count() > 2) {
-            if (qPow(tmp.value(0) - me->x(), 2) +
-                    qPow(tmp.value(1) - (height - me->y()), 2) < qPow(active, 2)) {
-                activePoint = 0;
-
-                cax = tmp.value(0);
-                cay = tmp.value(1);
-            } else {
-                activePoint = -1;
-            }
-
-            //Проверка на пересечение
-            if (isCrossroad() && mode == Draw) {
-                crossroad = true;
-                setCursor(Qt::ForbiddenCursor);
-            } else {
-                crossroad = false;
-                setCursor(Qt::CrossCursor);
-            }
+    if (move) {
+        if (leftBtn) {
+            gX = me->x() - cbx + ccx;
+            gY = me->y() - cby + ccy;
+        } else {
+            setCursor(Qt::OpenHandCursor);
+            cax = me->x() - gX;
+            cay = me->y() - gY;
         }
-    } else if (mode == Edit) {
-        //Проверить нет ли точек поблизоти курсора и выделить ближайшую точку
-        for (int i = 0; i < points.count(); i++) {
-            QVector<int> tmp = points.value(i);
+    } else {
+        tmp = points.value(0);
+        cax = me->x() - gX;
+        cay = me->y() - gY;
 
-            if (qPow(tmp.value(0) - cax, 2) +
-                    qPow(tmp.value(1) - cay, 2) < qPow(active, 2)) {
-                if (activePoint == -1) {
-                    activePoint = i;
-                } else if (!leftBtn) {
-                    QVector<int> tmp2 = points.value(activePoint);
+        if (mode == Draw) {
+            if (points.count() > 2) {
+                if (qPow(tmp.value(0) - cax, 2) +
+                    qPow(tmp.value(1) - (height - cay), 2) < qPow(active, 2)) {
+                    activePoint = 0;
 
-                    if (qSqrt(qPow(tmp.value(0) - cax, 2) +
-                                 qPow(tmp.value(1) - cay, 2)) <
-                           qSqrt(qPow(tmp2.value(0) - cax, 2) +
-                                 qPow(tmp2.value(1) - cay, 2))) {
+                    cax = tmp.value(0);
+                    cay = height - tmp.value(1);
+                } else {
+                    activePoint = -1;
+                }
+
+                //Проверка на пересечение
+                if (isCrossroad() && mode == Draw) {
+                    crossroad = true;
+                    setCursor(Qt::ForbiddenCursor);
+                } else {
+                    crossroad = false;
+                    setCursor(Qt::CrossCursor);
+                }
+            }
+        } else if (mode == Edit) {
+            //Проверить нет ли точек поблизоти курсора и выделить ближайшую точку
+            for (int i = 0; i < points.count(); i++) {
+                QVector<int> tmp = points.value(i);
+
+                if (qPow(tmp.value(0) - cax, 2) +
+                    qPow(tmp.value(1) - (height - cay), 2) < qPow(active, 2)) {
+                    if (activePoint == -1) {
                         activePoint = i;
+                    } else if (!leftBtn) {
+                        QVector<int> tmp2 = points.value(activePoint);
+
+                        if (qSqrt(qPow(tmp.value(0) - cax, 2) +
+                            qPow(tmp.value(1) - (height - cay), 2)) <
+                            qSqrt(qPow(tmp2.value(0) - cax, 2) +
+                            qPow(tmp2.value(1) - (height - cay), 2))) {
+                            activePoint = i;
+                        }
+                    }
+
+                    if (!leftBtn) {
+                        setCursor(Qt::OpenHandCursor);
                     }
                 }
+            }
 
-                if (!leftBtn) {
-                    setCursor(Qt::OpenHandCursor);
+            if (leftBtn && activePoint != -1) {
+                points[activePoint][0] = cax;
+                points[activePoint][1] = height - cay;
+            }
+
+            //Если мышь покинула облась активной точки — снимаем выделение
+            if (activePoint != -1 && !leftBtn) {
+                QVector<int> tmp = points.value(activePoint);
+                if (qPow(tmp.value(0) - cax, 2) +
+                    qPow(tmp.value(1) - (height - cay), 2) > qPow(active, 2)) {
+                    activePoint = -1;
+                    setCursor(Qt::ArrowCursor);
                 }
             }
-        }
 
-        if (leftBtn && activePoint != -1) {
-            points[activePoint][0] = cax;
-            points[activePoint][1] = cay;
-        }
-
-        //Если мышь покинула облась активной точки — снимаем выделение
-        if (activePoint != -1 && !leftBtn) {
-            QVector<int> tmp = points.value(activePoint);
-            if (qPow(tmp.value(0) - cax, 2) +
-                    qPow(tmp.value(1) - cay, 2) > qPow(active, 2)) {
-                activePoint = -1;
-                setCursor(Qt::ArrowCursor);
-            }
-        }
-
-        //Проверка на пересечения
-        if (isCrossroad()) {
-            crossroad = true;
-            if (leftBtn && activePoint != -1) {
-                setCursor(Qt::ForbiddenCursor);
-            }
-        } else {
-            crossroad = false;
-            if (leftBtn && activePoint != -1) {
-                setCursor(Qt::ClosedHandCursor);
+            //Проверка на пересечения
+            if (isCrossroad()) {
+                crossroad = true;
+                if (leftBtn && activePoint != -1) {
+                    setCursor(Qt::ForbiddenCursor);
+                }
+            } else {
+                crossroad = false;
+                if (leftBtn && activePoint != -1) {
+                    setCursor(Qt::ClosedHandCursor);
+                }
             }
         }
     }
@@ -390,20 +439,26 @@ void GLWidget::mousePressEvent(QMouseEvent *me) {
     if(me->button() == Qt::LeftButton) {
         leftBtn = true;
 
-        if (mode == Draw) {
-            if (!crossroad) {
-                if (activePoint == 0) {
-                    mode = Edit;
-                } else {
-                    QVector<int> tmp;
-                    tmp.push_back(cax);
-                    tmp.push_back(cay);
-                    points.push_back(tmp);
+        if (move) {
+            cbx = me->x();
+            cby = me->y();
+            setCursor(Qt::ClosedHandCursor);
+        } else {
+            if (mode == Draw) {
+                if (!crossroad) {
+                    if (activePoint == 0) {
+                        mode = Edit;
+                    } else {
+                        QVector<int> tmp;
+                        tmp.push_back(cax);
+                        tmp.push_back(height - cay);
+                        points.push_back(tmp);
+                    }
                 }
-            }
-        } else if (mode == Edit) {
-            if (activePoint != -1) {
-                setCursor(Qt::ClosedHandCursor);
+            } else if (mode == Edit) {
+                if (activePoint != -1) {
+                    setCursor(Qt::ClosedHandCursor);
+                }
             }
         }
     }
@@ -411,12 +466,17 @@ void GLWidget::mousePressEvent(QMouseEvent *me) {
     update();
 }
 
-void GLWidget::mouseReleaseEvent(QMouseEvent *me)
-{
-    if(leftBtn && me->button() == Qt::LeftButton){
+void GLWidget::mouseReleaseEvent(QMouseEvent *me) {
+    if(leftBtn && me->button() == Qt::LeftButton) {
         leftBtn = false;
-        if (activePoint != -1 && mode == Edit) {
+
+        if (this->cursor().shape() == Qt::ClosedHandCursor) {
             setCursor(Qt::OpenHandCursor);
+        }
+
+        if (move) {
+            ccx += me->x() - cbx;
+            ccy += me->y() - cby;
         }
     }
 

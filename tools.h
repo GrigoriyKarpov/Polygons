@@ -42,11 +42,12 @@ class Tools {
 public:
 
 public:
-    static QVector<Point> lineSlipInCorner(Point a, Point b, Point c, double h);
+    static QVector<Point> slipInAngle(Point a0, Point b0, Point c0, double h, double angle, double d1, double d2);
     static double dist(Point a, Point b);
     static double cos(Point a, Point b, Point c);
     static Point distOnSegment(Point a, Point b, Point c, double h);
-    static Point transformCS(Point p, Point o, double a);
+    static bool intersection(Point a, Point b, Point c, Point d, Point *intersection);
+    static Point transformCS(Point p, Point o, double a, double x, double y);
 };
 
 #endif // TOOLS_H

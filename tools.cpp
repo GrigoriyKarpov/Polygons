@@ -67,34 +67,39 @@ QString Line::toString() {
 }
 
 //Tools
-QVector<Point> Tools::lineSlipInCorner(Point a, Point b, Point c, double h) {
-    Point rK, rL, rF, rG;
-
-    //Косинус заданного угла
-    double cos = Tools::cos(a, b, c);
-
-    if (cos <= 0) {     //Угол >= 90
-        //Откладываем точки на отрезках угла согласно расстоянию h
-        rK = distOnSegment(b, a, b, h);
-        rG = distOnSegment(b, c, b, h);
-
-        rL = b;
-        rF = b;
-    } else {            //Угол < 90
-        double cor = qAcos(cos);
-
-        rL = distOnSegment(b, a, b, h / qTan(cor));
-        rG = distOnSegment(b, c, b, h / qSin(cor));
-        rF = distOnSegment(b, c, b, h / qTan(cor));
-        rK = distOnSegment(b, a, b, h / qSin(cor));
-    }
-
-    //Возвращаем массив из 4-х точек
+QVector<Point> Tools::slipInAngle(Point a0, Point b0, Point c0, double h, double angle, double d1, double d2) {
     QVector<Point> result;
-    result.push_back(rK);
-    result.push_back(rL);
-    result.push_back(rF);
-    result.push_back(rG);
+    Point r, q, m, t, c, o;
+
+    //Преобразуем систему координат
+    double angleCS = 180 * qAtan((a0.getY() - b0.getY()) / (a0.getX() - b0.getX())) / M_PI;
+    c = transformCS(c0, b0, angleCS, 0, 0);
+
+    // Скользящий отрезок
+    double sin   = qSin(angle);
+    double cos   = qCos(angle);
+    double ctg   = c.getX() / c.getY();
+
+    r.setX(h * (sin * ctg + cos));
+
+    q.setX(h * sin * ctg);
+    q.setY(h * sin);
+
+    //3-я вершина
+    m.setX(h * sin * ctg + d1 * cos);
+    m.setY((h - d1) * sin);
+
+    t.setX(m.getX() + d2 * sin);
+    t.setY(m.getY() + d2 * cos);
+
+    //Преобразование системы координат к исходной
+    r = transformCS(r, o, -angleCS, b0.getX(), b0.getY());
+    q = transformCS(q, o, -angleCS, b0.getX(), b0.getY());
+    t = transformCS(t, o, -angleCS, b0.getX(), b0.getY());
+
+    result.push_back(r);
+    result.push_back(q);
+    result.push_back(t);
 
     return result;
 }
@@ -128,15 +133,45 @@ Point Tools::distOnSegment(Point a, Point b, Point c, double h) {
     return Q;
 }
 
+bool Tools::intersection(Point a, Point b, Point c, Point d, Point *intersection) {
+    Point dir1 = Point(b.getX() - a.getX(), b.getY() - a.getY());
+    Point dir2 = Point(d.getX() - c.getX(), d.getY() - c.getY());
+
+    //считаем уравнения прямых проходящих через отрезки
+    double a1 = -dir1.getY();
+    double b1 = +dir1.getX();
+    double d1 = -(a1*a.getX() + b1*a.getY());
+
+    double a2 = -dir2.getY();
+    double b2 = +dir2.getX();
+    double d2 = -(a2*c.getX() + b2*c.getY());
+
+    //подставляем концы отрезков, для выяснения в каких полуплоскотях они
+    double seg1_line2_start = a2*a.getX() + b2*a.getY() + d2;
+    double seg1_line2_end = a2*b.getX() + b2*b.getY() + d2;
+
+    double seg2_line1_start = a1*c.getX() + b1*c.getY() + d1;
+    double seg2_line1_end = a1*d.getX() + b1*d.getY() + d1;
+
+    //если концы одного отрезка имеют один знак, значит он в одной полуплоскости и пересечения нет.
+    if (seg1_line2_start * seg1_line2_end >= 0 || seg2_line1_start * seg2_line1_end >= 0)
+        return false;
+
+    double u = seg1_line2_start / (seg1_line2_start - seg1_line2_end);
+    *intersection =  Point(dir1.getX() * u + a.getX(), dir1.getY() * u + a.getY());
+
+    return true;
+}
+
 //Преобразование системы координат
-Point Tools::transformCS(Point p, Point o, double a) {
+Point Tools::transformCS(Point p, Point o, double a, double x, double y) {
     Point result;
     a = M_PI * a / 180;
     double cos = qCos(a);
     double sin = qSin(a);
 
-    result.setX((p.getX() - o.getX()) * cos + (p.getY() - o.getY()) * sin);
-    result.setY((p.getY() - o.getY()) * cos - (p.getX() - o.getX()) * sin);
+    result.setX((p.getX() - o.getX()) * cos + (p.getY() - o.getY()) * sin + x);
+    result.setY((p.getY() - o.getY()) * cos - (p.getX() - o.getX()) * sin + y);
 
     return result;
 }

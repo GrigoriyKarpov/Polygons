@@ -1,6 +1,7 @@
 #ifndef GLWIDGET_H
 #define GLWIDGET_H
 
+#include "tools.h"
 #include <options.h>
 #include <QGLWidget>
 #include <QBrush>
@@ -14,7 +15,7 @@ class GLWidget : public QGLWidget
 
 public:
     GLWidget(QWidget *parent);
-    enum Modes {Draw, Edit, Demo};
+    enum Modes {Draw, Edit, Demo, Move};
     QPen getPolygonPen();
     void setMode(GLWidget::Modes mode);
 
@@ -29,8 +30,13 @@ protected:
     void mouseReleaseEvent(QMouseEvent *me);    // Метод реагирует на "отжатие" кнопки мыши
 
 private:
+    //Переменные для перемещения вида
     int gX;
     int gY;
+    int cbx;
+    int cby;
+    int ccx;
+    int ccy;
 
     //Ширина и высота виджета
     int height;
@@ -47,6 +53,7 @@ private:
     int active;
 
     //Флажки
+    bool move;
     bool leftBtn;
     bool crossroad;
     Modes mode;
@@ -59,13 +66,14 @@ private:
     QPen crossroadPen;
 
     //Массив добавленных вершин
-    QVector <QVector <int> > points;
-    QVector<double> v;
-    QVector<double> v2;
+    QVector<QVector <int> > points;
+    QVector<Point> path;
+    QVector<Point> inter;
     //Индекс точки, на которую наведен курсор (по умолчанию -1)
     int activePoint;
 
     bool isCrossroad();
+
 };
 
 #endif

@@ -16,6 +16,7 @@ class Window : public QWidget
 
 public:
     Window();
+    void moveToCenter();
 
 signals:
     void sendOptions(QPen pen);
@@ -26,6 +27,8 @@ public slots:
     void drawBtnClick();
     void editBtnClick();
     void saveBtnClick();
+    void moveBtnClick();
+    void demoBtnClick();
 
 private:
     Dialog *dialog;
@@ -35,6 +38,8 @@ private:
     QPushButton *editBtn;
     QPushButton *saveBtn;
     QPushButton *optionBtn;
+    QPushButton *moveBtn;
+    QPushButton *demoBtn;
 
     QHBoxLayout *btnsLayout;
     QVBoxLayout *mainlayout;
