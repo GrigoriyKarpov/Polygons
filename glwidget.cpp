@@ -37,7 +37,8 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
     active = 8;         //По умолчанию = 8
     activePoint = -1;
 
-    inter_f = 0;
+    inter_f = true;
+    slip = false;
     axis = true;
     move = false;
     crossroad = false;
@@ -108,63 +109,107 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         polygon.push_back(Point(50.0, 130.0));
         polygon.push_back(Point(200.0, 0.0));
 
-        double h  = 100.0;                            //Длина сользящего отрезка
-        double d1 = 0.0;                              //Раст от верш. скользящего отрезка до основания перпендикуляра
-        double d2 = 300.0;                            //Длина перпендикуляра
-        double angle = M_PI * elapsed / 180.0 * 1.0;  //Отрезок вращается с анимацией
+        double h  = 100.0;  //Длина сользящего отрезка
+        double d1 = 0.0;    //Раст от верш. скользящего отрезка до основания перпендикуляра
+        double d2 = 300.0;  //Длина перпендикуляра
+        double speed = 1.0; //Множитель скорости
 
-        QVector<Point> tmp = Tools::slipInAngle(polygon[ii], polygon[ij], polygon[ik], h, angle, d1, d2);
+        Point r;
+        Point q;
+        Point t;
 
-        Point r = tmp[0];  //Скользит по [b,a]
-        Point q = tmp[1];  //Скользит по [b,c]
-        Point t = tmp[2];  //Третья вершина
+        double angle = 0;
 
-        path.push_back(t); //Траектория
+        if (inter_f) {
+            //Выбор между скольжением в угле и скольжением по грани
+            if (!slip) {
+                angle = M_PI * elapsed / 180.0 * speed;  //Отрезок вращается с анимацией
 
-        //Переход на следующий угол
-        if (angle > M_PI - qAcos(Tools::cos(polygon[ii], polygon[ij], polygon[ik]))) {
-            if (ii == polygon.count() - 3) {
-                ii++;
-                ij++;
-                ik = 0;
-            } else if (ii == polygon.count() - 2) {
-                ii++;
-                ij = 0;
-                ik++;
-            } else if (ii == polygon.count() - 1) {
-                ii = 0;
-                ij++;
-                ik++;
-                inter.clear();
-                path.clear();
+                QVector<Point> tmp = Tools::slipInAngle(polygon[ii], polygon[ij], polygon[ik], h, angle, d1, d2);
+
+                r = tmp[0];  //Скользит по [b,a]
+                q = tmp[1];  //Скользит по [b,c]
+                t = tmp[2];  //Третья вершина
+
+                //Переход к скольжению по грани ij, ik
+                if (angle > M_PI - qAcos(Tools::cos(polygon[ii], polygon[ij], polygon[ik]))) {
+                    slip    = true;
+                    elapsed = 0;
+                } else {
+                    path.push_back(t);
+                }
             } else {
-                ii++;
-                ij++;
-                ik++;
-            }
+                //Скользим по грани ij, ik
+                Point s;
 
-            angle = 0;
-            elapsed = 0;
-            //path.clear();
-        }
+                s.setX(((polygon[ik].getX() - polygon[ij].getX()) / 100.0) * elapsed * speed);
+                s.setY(((polygon[ik].getY() - polygon[ij].getY()) / 100.0) * elapsed * speed);
 
-        //Точки пересечения траектории и сторон многоугольника
-        if (path.count() > 1) {
-            int k = path.count() - 1;
-            Point res;
+                angle = M_PI - qAcos(Tools::cos(polygon[ii], polygon[ij], polygon[ik]));
+                QVector<Point> tmp = Tools::slipInAngle(polygon[ii], polygon[ij], polygon[ik], h, angle, d1, d2);
 
-            for (int i = 0; i < polygon.count(); i++) {
-                int j = i + 1;
-                if (i == polygon.count() - 1) {
-                    j = 0;
+                for (int i = 0; i < 3; i++) {
+                    tmp[i].shift(s);
                 }
 
-                if (Tools::intersection(polygon[i], polygon[j], path[k - 1], path[k], &res)) {
-                    inter.push_back(res);
-                    inter1.push_back(Tools::outPoint(polygon[i], polygon[j], path[k]));
-                    break;
+                r = tmp[0];  //Скользит по [b,a]
+                q = tmp[1];  //Скользит по [b,c]
+                t = tmp[2];  //Третья вершина
+
+                //Если достигли вершины ik - переход на следующий угол
+                if (Tools::dist(polygon[ij], polygon[ik]) < Tools::dist(polygon[ij], q)) {
+                    if (ii == polygon.count() - 3) {
+                        ii++;
+                        ij++;
+                        ik = 0;
+                    } else if (ii == polygon.count() - 2) {
+                        ii++;
+                        ij = 0;
+                        ik++;
+                    } else if (ii == polygon.count() - 1) {
+                        ii = 0;
+                        ij++;
+                        ik++;
+                        //inter.clear();
+                        //path.clear();
+                        inter_f = false;
+                    } else {
+                        ii++;
+                        ij++;
+                        ik++;
+                    }
+
+                    slip = false;
+                    elapsed = 0;
+                } else {
+                    path.push_back(t);
                 }
             }
+
+            //Точки пересечения траектории и сторон многоугольника
+            if (path.count() > 1) {
+                int k = path.count() - 1;
+                Point res;
+
+                for (int i = 0; i < polygon.count(); i++) {
+                    int j = i + 1;
+                    if (i == polygon.count() - 1) {
+                        j = 0;
+                    }
+
+                    if (Tools::intersection(polygon[i], polygon[j], path[k - 1], path[k], &res)) {
+                        inter.push_back(res);
+                        inter1.push_back(Tools::outPoint(polygon[i], polygon[j], path[k]));
+                        break;
+                    }
+                }
+            }
+        } else {
+            QVector<Point> tmp = Tools::slipInAngle(polygon[ii], polygon[ij], polygon[ik], h, angle, d1, d2);
+
+            r = tmp[0];  //Скользит по [b,a]
+            q = tmp[1];  //Скользит по [b,c]
+            t = tmp[2];  //Третья вершина
         }
         //--------------------- Визуализация ---------------------//
         //Полигон
@@ -353,8 +398,13 @@ void GLWidget::paintEvent(QPaintEvent *event) {
 //Анимация
 void GLWidget::animate()
 {
-    int limit = 100000; //Лимит кадров
+    int limit = 10000; //Лимит кадров
     elapsed = (elapsed + qobject_cast<QTimer*>(sender())->interval()) % limit;
+
+    if (elapsed < 0) {
+        elapsed = 0;
+    }
+
     repaint();
 }
 

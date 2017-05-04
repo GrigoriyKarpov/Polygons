@@ -96,7 +96,7 @@ void Window::demoBtnClick()
 }
 
 void Window::moveToCenter() {
-    QRect rect = frameGeometry();
-    rect.moveCenter(QDesktopWidget().availableGeometry().center());
-    move(rect.topLeft());
+//    QRect rect = frameGeometry();
+//    rect.moveCenter(QDesktopWidget().availableGeometry().center());
+//    move(rect.topLeft());
 }

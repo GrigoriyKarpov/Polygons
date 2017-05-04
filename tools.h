@@ -17,6 +17,7 @@ public:
     double getY();
     void setX(double x);
     void setY(double y);
+    void shift(Point s);
 
     QString toString();
 };

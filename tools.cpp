@@ -203,6 +203,12 @@ int Tools::outPoint(Point a, Point b, Point c) {
     return result;
 }
 
+void Point::shift(Point s)
+{
+    this->x += s.getX();
+    this->y += s.getY();
+}
+
 //Косинус угла abc
 double Tools::cos(Point a, Point b, Point c) {
     Point v1 = Point(a.getX() - b.getX(), a.getY() - b.getY());

@@ -58,7 +58,8 @@ private:
     int active;
 
     //Флажки
-    int inter_f;
+    bool inter_f;
+    bool slip;
     bool axis;
     bool move;
     bool leftBtn;
