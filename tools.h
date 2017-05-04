@@ -48,6 +48,8 @@ public:
     static Point distOnSegment(Point a, Point b, Point c, double h);
     static bool intersection(Point a, Point b, Point c, Point d, Point *intersection);
     static Point transformCS(Point p, Point o, double a, double x, double y);
+    static int sign(double number);
+    static int outPoint(Point a, Point b, Point c);
 };
 
 #endif // TOOLS_H

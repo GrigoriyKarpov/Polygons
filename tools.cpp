@@ -27,10 +27,8 @@ void Point::setY(double y) {
 }
 
 QString Point::toString() {
-    QString result = "Point( " +
-            QString::number(this->x) + " ; " +
-            QString::number(this->y) + " )";
-
+    QString result;
+    result.sprintf("(%.1f; %.1f)", this->x, this->y);
     return result;
 }
 
@@ -72,7 +70,11 @@ QVector<Point> Tools::slipInAngle(Point a0, Point b0, Point c0, double h, double
     Point r, q, m, t, c, o;
 
     //Преобразуем систему координат
-    double angleCS = 180 * qAtan((a0.getY() - b0.getY()) / (a0.getX() - b0.getX())) / M_PI;
+    double angleCS = qAtan((a0.getY() - b0.getY()) / (a0.getX() - b0.getX()));
+    if (a0.getX() < b0.getX()) {
+        angleCS += M_PI;
+    }
+
     c = transformCS(c0, b0, angleCS, 0, 0);
 
     // Скользящий отрезок
@@ -166,12 +168,37 @@ bool Tools::intersection(Point a, Point b, Point c, Point d, Point *intersection
 //Преобразование системы координат
 Point Tools::transformCS(Point p, Point o, double a, double x, double y) {
     Point result;
-    a = M_PI * a / 180;
     double cos = qCos(a);
     double sin = qSin(a);
 
     result.setX((p.getX() - o.getX()) * cos + (p.getY() - o.getY()) * sin + x);
     result.setY((p.getY() - o.getY()) * cos - (p.getX() - o.getX()) * sin + y);
+
+    return result;
+}
+
+//Знак числа
+int Tools::sign(double number)
+{
+    if (number < 0) return -1;
+    if (number == 0) return 0;
+    return 1;
+}
+
+int Tools::outPoint(Point a, Point b, Point c) {
+    int result = 0;
+
+    double A = a.getY() - b.getY();
+    double B = -(a.getX() - b.getX());
+    double C = -(A * a.getX() + B * a.getY());
+
+    double equation = A * c.getX() + B * c.getY() + C;
+
+    if (equation > 0) {
+        result = 1;
+    } else if (equation < 0) {
+        result = -1;
+    }
 
     return result;
 }

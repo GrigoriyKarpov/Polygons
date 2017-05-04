@@ -28,6 +28,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *me);       // Метод реагирует на перемещение указателя, но по умолчанию setMouseTracking(false)
     void mousePressEvent(QMouseEvent *me);      // Реагирует на нажатие кнопок мыши
     void mouseReleaseEvent(QMouseEvent *me);    // Метод реагирует на "отжатие" кнопки мыши
+    void wheelEvent(QWheelEvent *me);
 
 private:
     //Переменные для перемещения вида
@@ -37,6 +38,10 @@ private:
     int cby;
     int ccx;
     int ccy;
+
+    double gScale;
+
+    QPainter painter;
 
     //Ширина и высота виджета
     int height;
@@ -53,8 +58,11 @@ private:
     int active;
 
     //Флажки
+    int inter_f;
+    bool axis;
     bool move;
     bool leftBtn;
+    bool wheel;
     bool crossroad;
     Modes mode;
 
@@ -69,11 +77,22 @@ private:
     QVector<QVector <int> > points;
     QVector<Point> path;
     QVector<Point> inter;
+    QVector<int> inter1;
     //Индекс точки, на которую наведен курсор (по умолчанию -1)
     int activePoint;
 
     bool isCrossroad();
 
+    int ii;
+    int ij;
+    int ik;
+
+    QVector<QString> log;
+
+    void gLine(Point a, Point b);
+    void gLine(double a, double b, double c, double d);
+    void gPoint(Point a);
+    void gPoint(double a, double b);
 };
 
 #endif
