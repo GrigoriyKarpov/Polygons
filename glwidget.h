@@ -94,6 +94,8 @@ private:
     void gLine(double a, double b, double c, double d);
     void gPoint(Point a);
     void gPoint(double a, double b);
+
+    void printInfo();
 };
 
 #endif

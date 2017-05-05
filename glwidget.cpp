@@ -61,7 +61,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
     painter.fillRect(0, 0, width, height, QBrush(Qt::white));
     //painter.translate(300, 300);
 
-    painter.save();
+    //painter.save();
 
     if (axis) {
         int startX =  -gX / gScale;
@@ -109,10 +109,10 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         polygon.push_back(Point(50.0, 130.0));
         polygon.push_back(Point(200.0, 0.0));
 
-        double h  = 100.0;  //Длина сользящего отрезка
-        double d1 = 0.0;    //Раст от верш. скользящего отрезка до основания перпендикуляра
-        double d2 = 300.0;  //Длина перпендикуляра
-        double speed = 1.0; //Множитель скорости
+        double h  = 100.0;   //Длина сользящего отрезка
+        double d1 = 0.0;     //Раст от верш. скользящего отрезка до основания перпендикуляра
+        double d2 = 300.0;   //Длина перпендикуляра
+        double speed = 5.0;  //Коэффициент скорости анимации
 
         Point r;
         Point q;
@@ -157,7 +157,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                 t = tmp[2];  //Третья вершина
 
                 //Если достигли вершины ik - переход на следующий угол
-                if (Tools::dist(polygon[ij], polygon[ik]) < Tools::dist(polygon[ij], q)) {
+                if (Tools::dist(polygon[ij], polygon[ik]) <= Tools::dist(polygon[ij], q)) {
                     if (ii == polygon.count() - 3) {
                         ii++;
                         ij++;
@@ -173,6 +173,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                         //inter.clear();
                         //path.clear();
                         inter_f = false;
+                        path.push_back(path[0]);
                     } else {
                         ii++;
                         ij++;
@@ -210,6 +211,8 @@ void GLWidget::paintEvent(QPaintEvent *event) {
             r = tmp[0];  //Скользит по [b,a]
             q = tmp[1];  //Скользит по [b,c]
             t = tmp[2];  //Третья вершина
+
+            elapsed = 0;
         }
         //--------------------- Визуализация ---------------------//
         //Полигон
@@ -269,15 +272,12 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         //Текст
         painter.setPen(textPen);
         painter.setFont(textFont);
-        //Текущий кадр
-        painter.drawText(QRect(width / 3 - 50,  2, 100, 16), Qt::AlignLeft,
-                         "time: " + QString::number(elapsed));
 
         //Координаты точек пересечения траектории
         textFont.setBold(true);
         textFont.setPixelSize(14);
         painter.setFont(textFont);
-        painter.drawText(QRect(4,  40, 200, 16), Qt::AlignLeft,
+        painter.drawText(QRect(4,  2, 200, 16), Qt::AlignLeft,
                                  QString::fromUtf8("Точки пересечения:"));
 
         textFont.setBold(false);
@@ -293,7 +293,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                     text += "in";
                 }
                 QString::number(inter1[i]);
-                painter.drawText(QRect(4,  60 + 18 * i, 200, 16), Qt::AlignLeft, text);
+                painter.drawText(QRect(4,  20 + 18 * i, 200, 16), Qt::AlignLeft, text);
             }
         }
         textFont.setPixelSize(12);
@@ -353,25 +353,19 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         }
     }
 
-    //Выводим координаты
+    //Вывод блока с информацией
+    printInfo();
+
     painter.setPen(textPen);
     painter.setFont(textFont);
-    painter.drawText(QRect(width - 46,  2, 46, 16), Qt::AlignLeft,
-                     "x: " + QString::number((int) (cax * 1.0 / gScale)));
-    painter.drawText(QRect(width - 46, 18, 46, 16), Qt::AlignLeft,
-                     "y: " + QString::number((int) ((height - cay) * 1.0 / gScale)));
 
-    //Вывод текущего режима
-    QString modeName = "Mode: Draw";
-    if (mode == Draw) {
-        modeName = "Mode: Draw";
-    } else if (mode == Edit) {
-        modeName = "Mode: Edit";
-    } else if (mode == Demo) {
-        modeName = "Mode: Demo";
+    //Лог
+    if (log.count() > 0) {
+        for (int i = 0; i < log.count(); i++) {
+            painter.drawText(QRect(width / 2 - 200,  2 + 16 * i, 400, 16), Qt::AlignLeft, log[i]);
+        }
+        log.clear();
     }
-
-    painter.drawText(QRect(4, 2, 150, 16), Qt::AlignLeft, modeName);
 
     //Вывод ошибки
     if (crossroad) {
@@ -380,24 +374,15 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         painter.drawText(QRect(4, height - 16, 400, 16), Qt::AlignLeft, errorMessage);
     }
 
-    //Лог ,  2, 100, 16
-    if (log.count() > 0) {
-        for (int i = 0; i < log.count(); i++) {
-            painter.drawText(QRect(2 * width / 3 - 50,  2 + 18 * i, 300, 16), Qt::AlignLeft, log[i]);
-        }
-        log.clear();
-    }
-
     painter.save();
+    painter.restore();
     painter.end();
 
     update();
-
 }
 
 //Анимация
-void GLWidget::animate()
-{
+void GLWidget::animate() {
     int limit = 10000; //Лимит кадров
     elapsed = (elapsed + qobject_cast<QTimer*>(sender())->interval()) % limit;
 
@@ -515,16 +500,6 @@ void GLWidget::gLine(double a, double b, double c, double d) {
                      height - b * gScale + gY,
                      c * gScale + gX,
                      height - d * gScale + gY);
-
-    /*painter.drawLine(a * gScale + gX,
-                     height - b * gScale + gY,
-                     c * gScale + gX,
-                     height - d * gScale + gY);
-
-    painter.drawLine((a + gX) * gScale,
-                     (height - b + gY) * gScale,
-                     (c + gX) * gScale,
-                     (height - d + gY) * gScale)*/;
 }
 
 void GLWidget::gPoint(Point a) {
@@ -534,6 +509,42 @@ void GLWidget::gPoint(Point a) {
 void GLWidget::gPoint(double a, double b) {
     painter.drawPoint(a * gScale + gX,
                       height - b * gScale + gY);
+}
+
+void GLWidget::printInfo() {
+    int w = 85;
+    int h = 16;
+    int t = 6;
+    int l = width - w;
+
+    painter.setPen(textPen);
+    painter.setFont(textFont);
+
+    //Вывод текущего режима
+    QString modeName = "Mode: Draw";
+    if (mode == Draw) {
+        modeName = "Mode: Draw";
+    } else if (mode == Edit) {
+        modeName = "Mode: Edit";
+    } else if (mode == Demo) {
+        modeName = "Mode: Demo";
+    }
+    painter.drawText(QRect(l, t + h * 0, w, h), Qt::AlignLeft, modeName);
+
+    //Выводим координаты
+    QString str_x = "x: " + QString::number((int) (cax * 1.0 / gScale));
+    QString str_y = "y: " + QString::number((int) ((height - cay) * 1.0 / gScale));
+
+    painter.drawText(QRect(l, t + h * 1, w, h), Qt::AlignLeft, str_x);
+    painter.drawText(QRect(l, t + h * 2, w, h), Qt::AlignLeft, str_y);
+
+    //Вывод масштаба
+    QString str_scale = "Scale: " + QString::number(gScale);
+    painter.drawText(QRect(l, t + h * 3, w, h), Qt::AlignLeft, str_scale);
+
+    //Текущий кадр
+    painter.drawText(QRect(l, t + h * 4, w, h), Qt::AlignLeft,
+                     "Time: " + QString::number(elapsed));
 }
 
 
@@ -703,23 +714,49 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *me) {
 
 //Масштабирование
 void GLWidget::wheelEvent(QWheelEvent *me) {
-    double delta = me->delta();
-    gScale *= 1 + delta / 1200.0;
+    double oldX = (me->x() - gX) * 1.0 / gScale;
+    double oldY = (height - (me->y() - gY)) * 1.0 / gScale;
 
-    if (gScale > 25.0) {
-        gScale = 25.0;
-    } else if (gScale < 0.05) {
-        gScale = 0.05;
+    double delta = me->delta();
+    gScale *= 1 + delta / 600.0;
+
+    if (gScale > 55.0) {
+        gScale = 55.0;
+    } else if (gScale < 0.0001) {
+        gScale = 0.0001;
     } else if (gScale > 0.9 && gScale < 1.1) {
         gScale = 1.0;
     }
 
-    //int t2 = (me->x() - gX);
+    //x
+    double newX = (me->x() - gX) * 1.0 / gScale;
+    if (newX < oldX) {
+        while (newX < oldX) {
+            gX--;
+            newX = (me->x() - gX) * 1.0 / gScale;
+        }
+    } else if (newX > oldX) {
+        while (newX > oldX) {
+            gX++;
+            newX = (me->x() - gX) * 1.0 / gScale;
+        }
+    }
+    ccx = gX;
 
-    //gX = gX + (t2 - t1);
-    //cax = me->x() - gX;
-    //cay = me->y() - gY;
-    //gX = gX - Tools::sign(delta) * (me->x() - width / 2) * ( 1 / gScale);
-    //gX = ((gX - width / 2) / 2) * ( 1 / gScale);
-    //ccx = gX;
+    //y
+    double newY = (height - (me->y() - gY)) * 1.0 / gScale;
+    if (newY < oldY) {
+        while (newY < oldY) {
+            gY++;
+            newY = (height - (me->y() - gY)) * 1.0 / gScale;
+        }
+    } else if (newY > oldY) {
+        while (newY > oldY) {
+            gY--;
+            newY = (height - (me->y() - gY)) * 1.0 / gScale;
+        }
+    }
+    ccy = gY;
+
+    update();
 }
