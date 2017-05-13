@@ -142,22 +142,23 @@ bool Tools::intersection(Point a, Point b, Point c, Point d, Point *intersection
     //считаем уравнения прямых проходящих через отрезки
     double a1 = -dir1.getY();
     double b1 = +dir1.getX();
-    double d1 = -(a1*a.getX() + b1*a.getY());
+    double c1 = -(a1*a.getX() + b1*a.getY());
 
     double a2 = -dir2.getY();
     double b2 = +dir2.getX();
-    double d2 = -(a2*c.getX() + b2*c.getY());
+    double c2 = -(a2*c.getX() + b2*c.getY());
 
     //подставляем концы отрезков, для выяснения в каких полуплоскотях они
-    double seg1_line2_start = a2*a.getX() + b2*a.getY() + d2;
-    double seg1_line2_end = a2*b.getX() + b2*b.getY() + d2;
+    double seg1_line2_start = a2*a.getX() + b2*a.getY() + c2;
+    double seg1_line2_end = a2*b.getX() + b2*b.getY() + c2;
 
-    double seg2_line1_start = a1*c.getX() + b1*c.getY() + d1;
-    double seg2_line1_end = a1*d.getX() + b1*d.getY() + d1;
+    double seg2_line1_start = a1*c.getX() + b1*c.getY() + c1;
+    double seg2_line1_end = a1*d.getX() + b1*d.getY() + c1;
 
     //если концы одного отрезка имеют один знак, значит он в одной полуплоскости и пересечения нет.
-    if (seg1_line2_start * seg1_line2_end >= 0 || seg2_line1_start * seg2_line1_end >= 0)
+    if (seg1_line2_start * seg1_line2_end >= 0 || seg2_line1_start * seg2_line1_end >= 0) {
         return false;
+    }
 
     double u = seg1_line2_start / (seg1_line2_start - seg1_line2_end);
     *intersection =  Point(dir1.getX() * u + a.getX(), dir1.getY() * u + a.getY());
@@ -185,6 +186,7 @@ int Tools::sign(double number)
     return 1;
 }
 
+//Принадлежит ли точка c прямой ab
 int Tools::outPoint(Point a, Point b, Point c) {
     int result = 0;
 
@@ -203,6 +205,37 @@ int Tools::outPoint(Point a, Point b, Point c) {
     return result;
 }
 
+//Пересечение 2-х прямых
+bool Tools::llInter(Point a, Point b, Point c, Point d, Point *p) {
+    Point dir1 = Point(b.getX() - a.getX(), b.getY() - a.getY());
+    Point dir2 = Point(d.getX() - c.getX(), d.getY() - c.getY());
+
+    //считаем уравнения прямых проходящих через отрезки
+    double a1 = -dir1.getY();
+    double b1 = +dir1.getX();
+    double c1 = -(a1*a.getX() + b1*a.getY());
+
+    double a2 = -dir2.getY();
+    double b2 = +dir2.getX();
+    double c2 = -(a2*c.getX() + b2*c.getY());
+
+    //подставляем концы отрезков, для выяснения в каких полуплоскотях они
+    double seg1_line2_start = a2*a.getX() + b2*a.getY() + c2;
+    double seg1_line2_end = a2*b.getX() + b2*b.getY() + c2;
+
+    double u = seg1_line2_start / (seg1_line2_start - seg1_line2_end);
+
+    //Прямые параллельны
+    if (u == INFINITY) {
+        return false;
+    }
+
+    *p = Point(dir1.getX() * u + a.getX(), dir1.getY() * u + a.getY());
+
+    return true;
+}
+
+//Здвиг точки
 void Point::shift(Point s)
 {
     this->x += s.getX();

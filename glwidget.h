@@ -65,6 +65,7 @@ private:
     bool leftBtn;
     bool wheel;
     bool crossroad;
+    bool shortEdge;
     Modes mode;
 
     //Инструменты рисования

@@ -4,6 +4,7 @@
 
 #include <QPainter>
 #include <QtCore/qmath.h>
+#include <QDesktopWidget>
 #include <algorithm>
 #include <QCursor>
 #include <QDebug>
@@ -20,6 +21,8 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
     //Инициализация переменных
     cax = 0;
     cay = 0;
+
+    elapsed = 0;
 
     gX = width / 2;
     gY = - height / 2;
@@ -44,6 +47,7 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
     crossroad = false;
     leftBtn = false;
     wheel = false;
+    shortEdge = false;
     mode = Demo;
 
     textPen = QPen(QColor(96, 96, 96));
@@ -107,18 +111,23 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         polygon.push_back(Point(200.0, -250.0));
         polygon.push_back(Point(-150.0, -150.0));
         polygon.push_back(Point(50.0, 130.0));
-        polygon.push_back(Point(200.0, 0.0));
+        polygon.push_back(Point(130.0, 130.0));
+        polygon.push_back(Point(160.0, 80.0));
 
         double h  = 100.0;   //Длина сользящего отрезка
         double d1 = 0.0;     //Раст от верш. скользящего отрезка до основания перпендикуляра
         double d2 = 300.0;   //Длина перпендикуляра
-        double speed = 5.0;  //Коэффициент скорости анимации
+        double speed = 0.7;  //Коэффициент скорости анимации
 
         Point r;
         Point q;
         Point t;
 
         double angle = 0;
+
+//        log.push_back(QString::number(ii));
+//        log.push_back(QString::number(ij));
+//        log.push_back(QString::number(ik));
 
         if (inter_f) {
             //Выбор между скольжением в угле и скольжением по грани
@@ -131,12 +140,81 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                 q = tmp[1];  //Скользит по [b,c]
                 t = tmp[2];  //Третья вершина
 
-                //Переход к скольжению по грани ij, ik
-                if (angle > M_PI - qAcos(Tools::cos(polygon[ii], polygon[ij], polygon[ik]))) {
-                    slip    = true;
-                    elapsed = 0;
+                //Если грань маленькая
+                int il = ik + 1;
+                if (ii == polygon.count() - 3) {
+                    il = 0;
+                }
+
+                if (Tools::dist(polygon[ij], polygon[ik]) < h &&
+                    Tools::dist(polygon[ij], polygon[ik]) <= Tools::dist(polygon[ij], q) &&
+                    Tools::dist(polygon[il], polygon[ik]) <= Tools::dist(polygon[il], q) + 1) {
+                    shortEdge = true;
+                }
+
+                if (shortEdge) {
+                    //log.push_back("true");
+                    Point v_point;
+
+                    if (Tools::llInter(polygon[ii], polygon[ij], polygon[ik], polygon[il], &v_point)) {
+                        tmp.clear();
+                        tmp = Tools::slipInAngle(polygon[ii], v_point, polygon[ik], h, angle, d1, d2);
+
+                        r = tmp[0];  //Скользит по [b,a]
+                        q = tmp[1];  //Скользит по [b,c]
+                        t = tmp[2];  //Третья вершина
+
+                        //log.push_back(QString::number(Tools::dist(polygon[ij], polygon[ii]) - Tools::dist(polygon[ij], tmp[0])));
+                        //log.push_back(QString::number(Tools::dist(polygon[ii], r)));
+                        path.push_back(t);
+
+                        if (Tools::dist(polygon[ii], polygon[ij]) <= Tools::dist(polygon[ii], r)) {
+                            shortEdge = false;
+
+                            if (ii == polygon.count() - 3) {
+                                ii++;
+                                ij++;
+                                ik = 0;
+                            } else if (ii == polygon.count() - 2) {
+                                ii++;
+                                ij = 0;
+                                ik++;
+                            } else if (ii == polygon.count() - 1) {
+                                ii = 0;
+                                ij++;
+                                ik++;
+                                inter_f = false;
+                                path.push_back(path[0]);
+                            } else {
+                                ii++;
+                                ij++;
+                                ik++;
+                            }
+
+                            elapsed = 0;
+                            angle = M_PI * elapsed / 180.0 * speed;
+                            tmp.clear();
+                            tmp = Tools::slipInAngle(polygon[ii], polygon[ij], polygon[ik], h, angle, d1, d2);
+
+                            while(Tools::dist(polygon[ij], polygon[ii]) < Tools::dist(polygon[ij], tmp[0])) {
+                               qDebug() << Tools::dist(polygon[ij], polygon[ii]) - Tools::dist(polygon[ij], tmp[0]);
+                               elapsed++;
+                               angle = M_PI * elapsed / 180.0 * speed;
+                               tmp.clear();
+                               tmp = Tools::slipInAngle(polygon[ii], polygon[ij], polygon[ik], h, angle, d1, d2);
+                            }
+
+                        }
+                    }
                 } else {
-                    path.push_back(t);
+                    //log.push_back("false");
+                    //Переход к скольжению по грани ij, ik
+                    if (angle > M_PI - qAcos(Tools::cos(polygon[ii], polygon[ij], polygon[ik]))) {
+                        slip    = true;
+                        elapsed = 0;
+                    } else {
+                        path.push_back(t);
+                    }
                 }
             } else {
                 //Скользим по грани ij, ik
@@ -170,8 +248,6 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                         ii = 0;
                         ij++;
                         ik++;
-                        //inter.clear();
-                        //path.clear();
                         inter_f = false;
                         path.push_back(path[0]);
                     } else {
@@ -386,9 +462,9 @@ void GLWidget::animate() {
     int limit = 10000; //Лимит кадров
     elapsed = (elapsed + qobject_cast<QTimer*>(sender())->interval()) % limit;
 
-    if (elapsed < 0) {
+    /*if (elapsed < 0) {
         elapsed = 0;
-    }
+    }*/
 
     repaint();
 }
@@ -544,7 +620,7 @@ void GLWidget::printInfo() {
 
     //Текущий кадр
     painter.drawText(QRect(l, t + h * 4, w, h), Qt::AlignLeft,
-                     "Time: " + QString::number(elapsed));
+                     "Timer: " + QString::number(elapsed));
 }
 
 
@@ -718,12 +794,12 @@ void GLWidget::wheelEvent(QWheelEvent *me) {
     double oldY = (height - (me->y() - gY)) * 1.0 / gScale;
 
     double delta = me->delta();
-    gScale *= 1 + delta / 600.0;
+    gScale *= 1 + delta / 1200.0;
 
     if (gScale > 55.0) {
         gScale = 55.0;
-    } else if (gScale < 0.0001) {
-        gScale = 0.0001;
+    } else if (gScale < 0.05) {
+        gScale = 0.05;
     } else if (gScale > 0.9 && gScale < 1.1) {
         gScale = 1.0;
     }

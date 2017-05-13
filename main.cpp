@@ -13,14 +13,14 @@ int main(int argc, char *argv[])
     window.moveToCenter();
 
 //    Point a = Point(0.0, 0.0);
-//    Point b = Point(10.0, 10.0);
-//    Point c = Point(10.0, 0.0);
-//    Point d = Point(0.0, 10.0);
+//    Point b = Point(0.0, 10.0);
+//    Point c = Point(2.0, 0.0);
+//    Point d = Point(1.999, 10.0);
 
-//    QVector<Point> t = Tools::intersect(a, b, c, d);
+//    Point res;
 
-//    if (t.count() > 0) {
-//        qDebug() << t[0].toString();
+//    if (Tools::llInter(a, b, c, d, &res)) {
+//        qDebug() << res.toString();
 //    }
 
     return app.exec();

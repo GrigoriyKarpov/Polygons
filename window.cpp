@@ -1,4 +1,5 @@
 #include <QtGui>
+#include <QDesktopWidget>
 #include "window.h"
 
 Window::Window() : QWidget() {
@@ -96,7 +97,7 @@ void Window::demoBtnClick()
 }
 
 void Window::moveToCenter() {
-//    QRect rect = frameGeometry();
-//    rect.moveCenter(QDesktopWidget().availableGeometry().center());
-//    move(rect.topLeft());
+    QRect rect = frameGeometry();
+    rect.moveCenter(QDesktopWidget().availableGeometry().center());
+    move(rect.topLeft());
 }

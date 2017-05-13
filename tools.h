@@ -51,6 +51,7 @@ public:
     static Point transformCS(Point p, Point o, double a, double x, double y);
     static int sign(double number);
     static int outPoint(Point a, Point b, Point c);
+    static bool llInter(Point a, Point b, Point c, Point d, Point *p);
 };
 
 #endif // TOOLS_H
