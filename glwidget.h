@@ -41,8 +41,6 @@ private:
 
     double gScale;
 
-    QPainter painter;
-
     //Ширина и высота виджета
     int height;
     int width;
@@ -69,6 +67,7 @@ private:
     Modes mode;
 
     //Инструменты рисования
+    QPainter painter;
     QFont textFont;
     QPen textPen;
     QPen polygonPen;
@@ -95,6 +94,7 @@ private:
     void gLine(double a, double b, double c, double d);
     void gPoint(Point a);
     void gPoint(double a, double b);
+    QPoint gQPoint(Point a);
 
     void printInfo();
 };

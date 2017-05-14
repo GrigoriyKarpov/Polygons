@@ -117,7 +117,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         double h  = 100.0;   //Длина сользящего отрезка
         double d1 = 0.0;     //Раст от верш. скользящего отрезка до основания перпендикуляра
         double d2 = 300.0;   //Длина перпендикуляра
-        double speed = 0.7;  //Коэффициент скорости анимации
+        double speed = 1.0;  //Коэффициент скорости анимации
 
         Point r;
         Point q;
@@ -310,12 +310,26 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         gLine(q, t);
         gLine(r, t);
 
-        //Траектория
+        //Траектория и область
         if (path.count() > 1) {
+            QPolygon charArea;
+            QPainterPath charAreaPath;
+
+            charArea << gQPoint(path[0]);
+
             painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine));
             for (int i = 0; i < path.count() - 1; i++) {
                 gLine(path[i], path[i + 1]);
+                charArea << gQPoint(path[i + 1]);
             }
+
+            charAreaPath.addPolygon(charArea);
+
+            //Заливка
+            QBrush fillBrush(QColor(255, 90, 90, 255), Qt::BDiagPattern); // Вариант со шриховкой
+            //QBrush fillBrush(QColor(255, 230, 190, 180), Qt::SolidPattern); // Вариант полупрозрачной заливки
+
+            painter.fillPath(charAreaPath, fillBrush);
         }
 
         //Вершины...
@@ -585,6 +599,10 @@ void GLWidget::gPoint(Point a) {
 void GLWidget::gPoint(double a, double b) {
     painter.drawPoint(a * gScale + gX,
                       height - b * gScale + gY);
+}
+
+QPoint GLWidget::gQPoint(Point a) {
+    return QPoint(a.getX() * gScale + gX, height - a.getY() * gScale + gY);
 }
 
 void GLWidget::printInfo() {
