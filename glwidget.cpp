@@ -48,7 +48,7 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
     leftBtn = false;
     wheel = false;
     shortEdge = false;
-    mode = Demo;
+    mode = Demo2;
 
     textPen = QPen(QColor(96, 96, 96));
     textFont.setPixelSize(12);
@@ -114,7 +114,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         polygon.push_back(Point(130.0, 130.0));
         polygon.push_back(Point(160.0, 80.0));
 
-        double h  = 100.0;   //Длина сользящего отрезка
+        double h  = 100.0;   //Длина скользящего отрезка
         double d1 = 0.0;     //Раст от верш. скользящего отрезка до основания перпендикуляра
         double d2 = 300.0;   //Длина перпендикуляра
         double speed = 1.0;  //Коэффициент скорости анимации
@@ -391,6 +391,77 @@ void GLWidget::paintEvent(QPaintEvent *event) {
     }
 
     //--------------------------------- end demo mode ---------------------------------//
+
+    if (mode == Demo2) {
+        QVector<Point> polygon1;
+        polygon1.push_back(Point(0.0, -250.0));
+        polygon1.push_back(Point(-350.0, -150.0));
+        polygon1.push_back(Point(-150.0, 130.0));
+        polygon1.push_back(Point(-70.0, 130.0));
+        polygon1.push_back(Point(-40.0, 80.0));
+
+        int end = 500;
+        if (elapsed > end) {
+            elapsed = end;
+        }
+        double step = - elapsed;
+
+        QVector<Point> polygon2;
+        polygon2.push_back(Point(400.0 + step, -120.0));
+        polygon2.push_back(Point(100.0 + step, -150.0));
+        polygon2.push_back(Point(150.0 + step, 180.0));
+        polygon2.push_back(Point(330.0 + step, 180.0));
+        polygon2.push_back(Point(360.0 + step, 130.0));
+
+        //Визуализация
+        QPolygon area1;
+
+        painter.setPen(polygonPen);
+        for (int i = 0; i < polygon1.count(); i++) {
+            int j = i + 1;
+            if (i == polygon1.count() - 1) {
+                j = 0;
+            }
+            gLine(polygon1[i], polygon1[j]);
+            area1 << gQPoint(polygon1[i]);
+        }
+
+        QPolygon area2;
+        for (int i = 0; i < polygon2.count(); i++) {
+            int j = i + 1;
+            if (i == polygon2.count() - 1) {
+                j = 0;
+            }
+            gLine(polygon2[i], polygon2[j]);
+            area2 << gQPoint(polygon2[i]);
+        }
+
+        //Область
+        QPolygon area_tmp1 = area1;
+
+        QPolygon area3 = area1.intersected(area2);
+
+        area1 = area1.subtracted(area2);
+        area2 = area2.subtracted(area_tmp1);
+
+        QPainterPath areaPath1;
+        QPainterPath areaPath2;
+        QPainterPath areaPath3;
+
+        areaPath1.addPolygon(area1);
+        areaPath2.addPolygon(area2);
+        areaPath3.addPolygon(area3);
+
+        //Заливка
+        QBrush fillBrush1(QColor(255, 100, 100, 150), Qt::SolidPattern);
+        QBrush fillBrush2(QColor(100, 100, 255, 150), Qt::SolidPattern);
+        QBrush fillBrush3(QColor(200, 50, 200, 255), Qt::BDiagPattern);
+
+        painter.fillPath(areaPath1, fillBrush1);
+        painter.fillPath(areaPath2, fillBrush2);
+        painter.fillPath(areaPath3, fillBrush3);
+    }
+
 
     //Рисуем полигон
     if (points.count() > 0) {

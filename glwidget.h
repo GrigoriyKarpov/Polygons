@@ -15,7 +15,7 @@ class GLWidget : public QGLWidget
 
 public:
     GLWidget(QWidget *parent);
-    enum Modes {Draw, Edit, Demo, Move};
+    enum Modes {Draw, Edit, Demo, Move, Demo2};
     QPen getPolygonPen();
     void setMode(GLWidget::Modes mode);
 
