@@ -265,10 +265,14 @@ Point Tools::polPointText(QVector<Point> polygon, int i, double dist) {
 }
 
 //Здвиг точки
-void Point::shift(Point s)
-{
+void Point::shift(Point s) {
     this->x += s.getX();
     this->y += s.getY();
+}
+
+void Point::shift(double x, double y) {
+    this->x += x;
+    this->y += y;
 }
 
 //Косинус угла abc

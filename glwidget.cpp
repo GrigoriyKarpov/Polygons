@@ -414,36 +414,17 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         polygon2.push_back(Point(360.0 + step, 130.0));
 
         //Визуализация
+        //Области внутри полигонов и пересечения
         QPolygon area1;
-
         for (int i = 0; i < polygon1.count(); i++) {
-            int j = i + 1;
-            if (i == polygon1.count() - 1) {
-                j = 0;
-            }
-
-            painter.setPen(polygonPen);
-            gLine(polygon1[i], polygon1[j]);
-
             area1 << gQPoint(polygon1[i]);
         }
 
-        //gPoint(Tools::polygonCenter(polygon1));
-
         QPolygon area2;
         for (int i = 0; i < polygon2.count(); i++) {
-            int j = i + 1;
-            if (i == polygon2.count() - 1) {
-                j = 0;
-            }
-
-            painter.setPen(polygonPen);
-            gLine(polygon2[i], polygon2[j]);
-
             area2 << gQPoint(polygon2[i]);
         }
 
-        //Области
         QPolygon area_tmp1 = area1;
 
         QPolygon area3 = area1.intersected(area2);
@@ -460,33 +441,17 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         areaPath3.addPolygon(area3);
 
         //Заливка
-        QBrush fillBrush1(QColor(255, 100, 100, 150), Qt::SolidPattern);
-        QBrush fillBrush2(QColor(100, 100, 255, 150), Qt::SolidPattern);
-        QBrush fillBrush3(QColor(100, 255, 100, 255), Qt::SolidPattern);
+        QBrush fillBrush1(QColor(255, 100, 100, 120), Qt::SolidPattern);
+        QBrush fillBrush2(QColor(100, 100, 255, 120), Qt::SolidPattern);
+        QBrush fillBrush3(QColor(100, 255, 100, 120), Qt::SolidPattern);
 
         painter.fillPath(areaPath1, fillBrush1);
         painter.fillPath(areaPath2, fillBrush2);
         painter.fillPath(areaPath3, fillBrush3);
 
-        //Подписи
-        QPen textPolygonPen = QPen();
-        textPolygonPen.setWidth(1);
-
-        QFont polygonFont;
-        polygonFont.setPixelSize(20);
-
-        painter.setPen(textPolygonPen);
-        painter.setFont(polygonFont);
-
-        for (int i = 0; i < polygon1.count(); i++) {
-            gText(Tools::polPointText(polygon1, i, 10.0), QString::number(i));
-        }
-        gText(Tools::polygonCenter(polygon1), "A");
-
-        for (int i = 0; i < polygon2.count(); i++) {
-            gText(Tools::polPointText(polygon2, i, 10.0), QString::number(i));
-        }
-        gText(Tools::polygonCenter(polygon2), "B");
+        //Полигоны
+        gPolygon(polygon1, "A");
+        gPolygon(polygon2, "B");
     }
 
 
@@ -697,18 +662,64 @@ void GLWidget::gPoint(double a, double b) {
                       height - b * gScale + gY);
 }
 
+void GLWidget::gPolygon(QVector<Point> polygon, QString name) {
+    //Грани и вершины
+    for (int i = 0; i < polygon.count(); i++) {
+        int j = i + 1;
+        if (i == polygon.count() - 1) {
+            j = 0;
+        }
+
+        painter.setPen(polygonPen);
+        gLine(polygon[i], polygon[j]);
+
+        painter.setPen(QPen(Qt::black, 8, Qt::SolidLine, Qt::RoundCap));
+        gPoint(polygon[i]);
+    }
+
+    //Подписи
+    QPen textPolygonPen = QPen();
+    textPolygonPen.setWidth(5);
+
+    QFont polygonFont1;
+    polygonFont1.setPixelSize(18);
+
+    QFont polygonFont2;
+    polygonFont2.setPixelSize(15);
+
+    QFont polygonFont3;
+    polygonFont3.setPixelSize(22);
+
+    painter.setPen(textPolygonPen);
+
+    double dist = 13.0 / gScale;
+
+    for (int i = 0; i < polygon.count(); i++) {
+        Point c = Tools::polPointText(polygon, i, dist);
+        painter.setFont(polygonFont1);
+        gText(c, name);
+
+        painter.setFont(polygonFont2);
+        c.shift(12 / gScale, -6 / gScale);
+        gText(c, QString::number(i));
+    }
+
+    painter.setFont(polygonFont3);
+    gText(Tools::polygonCenter(polygon), name);
+}
+
 void GLWidget::gText(Point p, QString text) {
     int fontSize = painter.font().pixelSize();
 
     double w = (fontSize - 5 ) * text.length();
     double h = fontSize + 4;
 
-    QRect rect = QRect((p.getX() - w / 2.0) * gScale + gX,
-                       height - (p.getY() + h / 2.0) * gScale + gY,
+    QRect rect = QRect(p.getX() * gScale + gX - w / 2,
+                       height - p.getY() * gScale + gY - h / 2,
                        w, h);
 
     //painter.fillRect(rect, QBrush(Qt::cyan));
-    painter.drawText(rect, Qt::AlignLeft, text);
+    painter.drawText(rect, text);
 }
 
 QPoint GLWidget::gQPoint(Point a) {

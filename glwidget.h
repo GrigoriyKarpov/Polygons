@@ -96,6 +96,8 @@ private:
     void gPoint(Point a);
     void gPoint(double a, double b);
 
+    void gPolygon(QVector<Point> polygon, QString name);
+
     void gText(Point p, QString text);
 
     QPoint gQPoint(Point a);
