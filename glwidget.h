@@ -79,7 +79,7 @@ private:
     QVector<Point> path;
     QVector<Point> inter;
     QVector<int> inter1;
-    //Индекс точки, на которую наведен курсор (по умолчанию -1)
+
     int activePoint;
 
     bool isCrossroad();
@@ -92,8 +92,12 @@ private:
 
     void gLine(Point a, Point b);
     void gLine(double a, double b, double c, double d);
+
     void gPoint(Point a);
     void gPoint(double a, double b);
+
+    void gText(Point p, QString text);
+
     QPoint gQPoint(Point a);
 
     void printInfo();

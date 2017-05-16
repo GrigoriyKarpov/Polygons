@@ -2,6 +2,7 @@
 #define TOOLS_H
 
 #include <QString>
+#include <QPainter>
 
 //Point
 class Point {
@@ -52,6 +53,24 @@ public:
     static int sign(double number);
     static int outPoint(Point a, Point b, Point c);
     static bool llInter(Point a, Point b, Point c, Point d, Point *p);
+    static Point polygonCenter(QVector<Point> polygon);
+    static Point vector(Point a, Point b);
+    static Point polPointText(QVector<Point> polygon, int i, double dist);
 };
+
+//
+/*class Polygon {
+private:
+    QVector<Point> points;
+    QVector<QString> names;
+    QVector<QPen> pens;
+    QPen sPen;
+    QBrush sBrush;
+
+public:
+    Polygon();
+    Polygon(QPen pen);
+    Polygon(QBrush brush);
+}*/
 
 #endif // TOOLS_H

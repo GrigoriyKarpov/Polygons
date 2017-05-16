@@ -235,6 +235,35 @@ bool Tools::llInter(Point a, Point b, Point c, Point d, Point *p) {
     return true;
 }
 
+Point Tools::polygonCenter(QVector<Point> polygon) {
+    double cx = 0;
+    double cy = 0;
+
+
+    for (int i = 0; i < polygon.count(); i++) {
+        cx += polygon[i].getX();
+        cy += polygon[i].getY();
+    }
+
+    cx /= polygon.count();
+    cy /= polygon.count();
+
+    return Point(cx, cy);
+}
+
+Point Tools::vector(Point a, Point b) {
+    return Point(b.getX() - a.getX(), b.getY() - a.getY());
+}
+
+Point Tools::polPointText(QVector<Point> polygon, int i, double dist) {
+    Point v = Tools::vector(Tools::polygonCenter(polygon), polygon[i]);
+
+    double x = polygon[i].getX() + dist * v.getX() / Tools::dist(Tools::polygonCenter(polygon), polygon[i]);
+    double y = polygon[i].getY() + dist * v.getY() / Tools::dist(Tools::polygonCenter(polygon), polygon[i]);
+
+    return Point(x, y);
+}
+
 //Здвиг точки
 void Point::shift(Point s)
 {

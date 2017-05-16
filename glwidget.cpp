@@ -400,7 +400,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         polygon1.push_back(Point(-70.0, 130.0));
         polygon1.push_back(Point(-40.0, 80.0));
 
-        int end = 500;
+        int end = 600;
         if (elapsed > end) {
             elapsed = end;
         }
@@ -416,15 +416,19 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         //Визуализация
         QPolygon area1;
 
-        painter.setPen(polygonPen);
         for (int i = 0; i < polygon1.count(); i++) {
             int j = i + 1;
             if (i == polygon1.count() - 1) {
                 j = 0;
             }
+
+            painter.setPen(polygonPen);
             gLine(polygon1[i], polygon1[j]);
+
             area1 << gQPoint(polygon1[i]);
         }
+
+        //gPoint(Tools::polygonCenter(polygon1));
 
         QPolygon area2;
         for (int i = 0; i < polygon2.count(); i++) {
@@ -432,11 +436,14 @@ void GLWidget::paintEvent(QPaintEvent *event) {
             if (i == polygon2.count() - 1) {
                 j = 0;
             }
+
+            painter.setPen(polygonPen);
             gLine(polygon2[i], polygon2[j]);
+
             area2 << gQPoint(polygon2[i]);
         }
 
-        //Область
+        //Области
         QPolygon area_tmp1 = area1;
 
         QPolygon area3 = area1.intersected(area2);
@@ -455,11 +462,31 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         //Заливка
         QBrush fillBrush1(QColor(255, 100, 100, 150), Qt::SolidPattern);
         QBrush fillBrush2(QColor(100, 100, 255, 150), Qt::SolidPattern);
-        QBrush fillBrush3(QColor(200, 50, 200, 255), Qt::BDiagPattern);
+        QBrush fillBrush3(QColor(100, 255, 100, 255), Qt::SolidPattern);
 
         painter.fillPath(areaPath1, fillBrush1);
         painter.fillPath(areaPath2, fillBrush2);
         painter.fillPath(areaPath3, fillBrush3);
+
+        //Подписи
+        QPen textPolygonPen = QPen();
+        textPolygonPen.setWidth(1);
+
+        QFont polygonFont;
+        polygonFont.setPixelSize(20);
+
+        painter.setPen(textPolygonPen);
+        painter.setFont(polygonFont);
+
+        for (int i = 0; i < polygon1.count(); i++) {
+            gText(Tools::polPointText(polygon1, i, 10.0), QString::number(i));
+        }
+        gText(Tools::polygonCenter(polygon1), "A");
+
+        for (int i = 0; i < polygon2.count(); i++) {
+            gText(Tools::polPointText(polygon2, i, 10.0), QString::number(i));
+        }
+        gText(Tools::polygonCenter(polygon2), "B");
     }
 
 
@@ -590,9 +617,7 @@ void GLWidget::setMode(GLWidget::Modes mode) {
 
             if (this->mode == Draw) {
                 setCursor(Qt::CrossCursor);
-            } else if (this->mode == Edit) {
-                setCursor(Qt::ArrowCursor);
-            } else if (this->mode == Demo) {
+            } else {
                 setCursor(Qt::ArrowCursor);
             }
         }
@@ -670,6 +695,20 @@ void GLWidget::gPoint(Point a) {
 void GLWidget::gPoint(double a, double b) {
     painter.drawPoint(a * gScale + gX,
                       height - b * gScale + gY);
+}
+
+void GLWidget::gText(Point p, QString text) {
+    int fontSize = painter.font().pixelSize();
+
+    double w = (fontSize - 5 ) * text.length();
+    double h = fontSize + 4;
+
+    QRect rect = QRect((p.getX() - w / 2.0) * gScale + gX,
+                       height - (p.getY() + h / 2.0) * gScale + gY,
+                       w, h);
+
+    //painter.fillRect(rect, QBrush(Qt::cyan));
+    painter.drawText(rect, Qt::AlignLeft, text);
 }
 
 QPoint GLWidget::gQPoint(Point a) {
