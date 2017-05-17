@@ -264,6 +264,119 @@ Point Tools::polPointText(QVector<Point> polygon, int i, double dist) {
     return Point(x, y);
 }
 
+Point Tools::normal(Point a, Point b) {
+    return Point(a.getY() - b.getY(), b.getX() - a.getX());
+}
+
+Point Tools::center(Point a, Point b) {
+    return Point((a.getX() + b.getX()) / 2.0, (a.getY() + b.getY()) / 2.0);
+}
+
+QVector<Point> Tools::outCharArea(QVector<Point> polygon1, QVector<Point> polygon2, int o) {
+    //1. Нормали
+    QVector<Point> n;
+    for (int i = 0; i < polygon1.count(); i++) {
+        int j = i + 1;
+        if (i == polygon1.count() - 1) {
+            j = 0;
+        }
+
+        n.push_back(Tools::normal(polygon1[i], polygon1[j]));
+    }
+
+    QVector<Point> m;
+    for (int i = 0; i < polygon2.count(); i++) {
+        int j = i + 1;
+        if (i == polygon2.count() - 1) {
+            j = 0;
+        }
+
+        m.push_back(Tools::normal(polygon2[i], polygon2[j]));
+    }
+
+    //2   Нахождение векторов движения
+    QVector< QPair< int, Point > > s;
+
+    //2.1 Для каждого ребра неподв. находим верш. подвиж. которая может скользить по нему
+    for (int i = 0; i < n.count(); i++) {
+        int j = i + 1;
+        if (i == n.count() - 1) {
+            j = 0;
+        }
+
+        for (int k = 0; k < polygon2.count(); k++) {
+            int t = k + 1;
+            if (k == polygon2.count() - 1) {
+                t = 0;
+            }
+            int l = k - 1;
+            if (k == 0) {
+                l = polygon2.count() - 1;
+            }
+
+            //Находим углы
+            double a1 = Tools::cos(n[i], Tools::vector(polygon2[k], polygon2[t]));
+            double a2 = Tools::cos(n[i], Tools::vector(polygon2[k], polygon2[l]));
+
+            //Находим вершину, которая может скользить
+            if (a1 >= 0 && a2 >= 0) {
+                Point v2 = Tools::vector(polygon2[k], polygon2[o]);
+                v2.shift(polygon1[j]);
+
+                s.push_back(QPair< int, Point >(i, v2));
+
+                break;
+            }
+        }
+    }
+
+    //2.2.	Для кажд. ребра подвиж. находим верш. неподвиж.
+    for (int i = m.count() - 1; i >= 0; i--) {
+        int j = i + 1;
+        if (i == m.count() - 1) {
+            j = 0;
+        }
+
+        for (int k = 0; k < polygon1.count() - 1; k++) {
+            int t = k + 1;
+            if (k == polygon1.count() - 1) {
+                t = 0;
+            }
+            int l = k - 1;
+            if (k == 0) {
+                l = polygon1.count() - 1;
+            }
+
+            //Находим углы
+            double a1 = Tools::cos(m[i], Tools::vector(polygon1[k], polygon1[t]));
+            double a2 = Tools::cos(m[i], Tools::vector(polygon1[k], polygon1[l]));
+
+            //Находим вершину, которая может скользить
+            if (a1 >= 0 && a2 >= 0) {
+                Point v2 = Tools::vector(polygon2[j], polygon2[o]);
+                v2.shift(polygon1[k]);
+
+                s.push_back(QPair< int, Point >(k, v2));
+
+                break;
+            }
+        }
+    }
+
+
+    //3.	Построим характеристический многоугольник, для этого упорядочим пары
+    QVector<Point> charArea;
+    for (int i = 0; i < polygon1.count(); i++) {
+        for (int j = s.count() - 1; j >= 0 ; j--) {
+            if (s[j].first == i) {
+                charArea.push_back(s[j].second);
+            }
+        }
+    }
+
+    return charArea;
+}
+
 //Здвиг точки
 void Point::shift(Point s) {
     this->x += s.getX();
@@ -280,11 +393,19 @@ double Tools::cos(Point a, Point b, Point c) {
     Point v1 = Point(a.getX() - b.getX(), a.getY() - b.getY());
     Point v2 = Point(c.getX() - b.getX(), c.getY() - b.getY());
 
-    double result = (v1.getX() * v2.getX() + v1.getY() * v2.getY()) /
-            (qSqrt(qPow(v1.getX(), 2) + qPow(v1.getY(), 2)) *
-             qSqrt(qPow(v2.getX(), 2) + qPow(v2.getY(), 2)));
+    return cos(v1, v2);
+}
 
-    return result;
+double Tools::cos(Point v1, Point v2) {
+
+    double a = v1.getX() * v2.getX() + v1.getY() * v2.getY();
+
+    double b = qSqrt(qPow(v1.getX(), 2) + qPow(v1.getY(), 2)) *
+                qSqrt(qPow(v2.getX(), 2) + qPow(v2.getY(), 2));
+
+    //qDebug() << b;
+
+    return a / b;
 }
 
 //расстояние между двумя точками

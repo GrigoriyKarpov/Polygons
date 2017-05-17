@@ -27,7 +27,7 @@ public slots:
     void drawBtnClick();
     void editBtnClick();
     void saveBtnClick();
-    void moveBtnClick();
+    //void moveBtnClick();
     void demoBtnClick();
 
 private:
@@ -38,7 +38,7 @@ private:
     QPushButton *editBtn;
     QPushButton *saveBtn;
     QPushButton *optionBtn;
-    QPushButton *moveBtn;
+    //QPushButton *moveBtn;
     QPushButton *demoBtn;
 
     QHBoxLayout *btnsLayout;

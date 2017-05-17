@@ -48,7 +48,7 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
     leftBtn = false;
     wheel = false;
     shortEdge = false;
-    mode = Demo2;
+    mode = Demo3;
 
     textPen = QPen(QColor(96, 96, 96));
     textFont.setPixelSize(12);
@@ -454,55 +454,95 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         gPolygon(polygon2, "B");
     }
 
+    //Внешнаяя характеристическая область
+    if (mode == Demo3) {
+        QVector<Point> polygon1;
+        polygon1.push_back(Point(0.0, -250.0));
+        polygon1.push_back(Point(-350.0, -150.0));
+        polygon1.push_back(Point(-150.0, 130.0));
+        polygon1.push_back(Point(-70.0, 130.0));
+        polygon1.push_back(Point(-40.0, 80.0));
 
-    //Рисуем полигон
-    if (points.count() > 0) {
-        QPen pointPen = polygonPen;
-        pointPen.setWidth(polygonPen.width() + 3);
+        QVector<Point> polygon2;
+        polygon2.push_back(Point(250.0, -40.0));
+        polygon2.push_back(Point(140.0, -50.0));
+        polygon2.push_back(Point(150.0, 70.0));
+        polygon2.push_back(Point(230.0, 80.0));
+        polygon2.push_back(Point(260.0, 10.0));
 
-        painter.setPen(pointPen);
-        painter.drawPoint(points[0][0] + gX, height - points[0][1] + gY);
-        painter.setPen(polygonPen);
+        QVector<Point> outCharArea = Tools::outCharArea(polygon1, polygon2, 3);
 
-        if (points.count() > 1) {
-            for (int i = 0; i < points.count() - 1; i++) {
-                painter.drawLine(points[i][0] + gX, height - points[i][1] + gY,
-                                 points[i + 1][0] + gX, height - points[i + 1][1] + gY);
+        //Визуализация
+        //Полигоны
+        gPolygon(polygon1, "A");
+        gPolygon(polygon2, "B");
 
-                painter.setPen(pointPen);
-                painter.drawPoint(points[i + 1][0] + gX, height - points[i + 1][1] + gY);
-                painter.setPen(polygonPen);
-            }
+        gPolygon(outCharArea, "C");
+
+        //3.
+        QPolygon area1;
+
+        for (int i = 0; i < outCharArea.count(); i++) {
+            area1 << gQPoint(outCharArea[i]);
         }
 
-        //Как рисовать последнию линию (в начало или к курсору) — зависит от текщего режима
-        if (mode == Edit) {
-            painter.drawLine(points[0][0] + gX,
-                             height - points[0][1] + gY,
-                             points[points.count() - 1][0] + gX,
-                             height - points[points.count() - 1][1] + gY);
-        } else if (mode == Draw) {
-            if (crossroad) {
-                painter.setPen(crossroadPen);
-            } else {
-                painter.setPen(polygonPen);
+        QPainterPath areaPath1;
+        areaPath1.addPolygon(area1);
+        QBrush fillBrush1(QColor(255, 90, 90, 255), Qt::BDiagPattern);
+        painter.fillPath(areaPath1, fillBrush1);
+
+    }
+
+    if (mode == Draw) {
+        //Рисуем полигон
+        if (points.count() > 0) {
+            QPen pointPen = polygonPen;
+            pointPen.setWidth(polygonPen.width() + 3);
+
+            painter.setPen(pointPen);
+            painter.drawPoint(points[0][0] + gX, height - points[0][1] + gY);
+            painter.setPen(polygonPen);
+
+            if (points.count() > 1) {
+                for (int i = 0; i < points.count() - 1; i++) {
+                    painter.drawLine(points[i][0] + gX, height - points[i][1] + gY,
+                                     points[i + 1][0] + gX, height - points[i + 1][1] + gY);
+
+                    painter.setPen(pointPen);
+                    painter.drawPoint(points[i + 1][0] + gX, height - points[i + 1][1] + gY);
+                    painter.setPen(polygonPen);
+                }
             }
 
-            painter.drawLine(points[points.count() - 1][0] + gX,
-                    height - points[points.count() - 1][1] + gY,
-                    cax + gX,
-                    cay + gY);
-        }
+            //Как рисовать последнию линию (в начало или к курсору) — зависит от текщего режима
+            if (mode == Edit) {
+                painter.drawLine(points[0][0] + gX,
+                                 height - points[0][1] + gY,
+                                 points[points.count() - 1][0] + gX,
+                                 height - points[points.count() - 1][1] + gY);
+            } else if (mode == Draw) {
+                if (crossroad) {
+                    painter.setPen(crossroadPen);
+                } else {
+                    painter.setPen(polygonPen);
+                }
 
-        //Нарисовать выделение вокруг активной точки
-        if (activePoint != -1) {
+                painter.drawLine(points[points.count() - 1][0] + gX,
+                        height - points[points.count() - 1][1] + gY,
+                        cax + gX,
+                        cay + gY);
+            }
 
-            painter.setPen(circlePen);
-            QVector<int> tmp3 = points.value(activePoint);
+            //Нарисовать выделение вокруг активной точки
+            if (activePoint != -1) {
 
-            painter.drawEllipse(tmp3.value(0) - active + gX,
-                                (height - tmp3.value(1)) - active + gY,
-                                active * 2, active * 2);
+                painter.setPen(circlePen);
+                QVector<int> tmp3 = points.value(activePoint);
+
+                painter.drawEllipse(tmp3.value(0) - active + gX,
+                                    (height - tmp3.value(1)) - active + gY,
+                                    active * 2, active * 2);
+            }
         }
     }
 
@@ -653,6 +693,23 @@ void GLWidget::gLine(double a, double b, double c, double d) {
                      height - d * gScale + gY);
 }
 
+void GLWidget::gVector(Point v) {
+    gVector(Point(), v);
+}
+
+void GLWidget::gVector(Point s, Point v) {
+    QPolygon p;
+    double arrow_width = 50.0;
+    double arrow_len = 100.0;
+
+    p << QPoint( 0, -arrow_width );
+    p << QPoint( -arrow_len, 0 );
+    p << QPoint( 0, arrow_width );
+
+    v.shift(s);
+    gLine(s, v);
+}
+
 void GLWidget::gPoint(Point a) {
     gPoint(a.getX(), a.getY());
 }
@@ -708,10 +765,20 @@ void GLWidget::gPolygon(QVector<Point> polygon, QString name) {
     gText(Tools::polygonCenter(polygon), name);
 }
 
+void GLWidget::gConvexPolygon(QPolygon p) {
+    QPolygon gp;
+
+    for (int i = 0; i < p.count(); i++) {
+        gp << QPoint(p[i].x() * gScale + gX, height - p[i].y() * gScale + gY);
+    }
+
+    painter.drawConvexPolygon(gp);
+}
+
 void GLWidget::gText(Point p, QString text) {
     int fontSize = painter.font().pixelSize();
 
-    double w = (fontSize - 5 ) * text.length();
+    double w = fontSize * text.length() + 20;
     double h = fontSize + 4;
 
     QRect rect = QRect(p.getX() * gScale + gX - w / 2,
@@ -719,7 +786,7 @@ void GLWidget::gText(Point p, QString text) {
                        w, h);
 
     //painter.fillRect(rect, QBrush(Qt::cyan));
-    painter.drawText(rect, text);
+    painter.drawText(rect, Qt::AlignCenter, text);
 }
 
 QPoint GLWidget::gQPoint(Point a) {
@@ -731,6 +798,10 @@ void GLWidget::printInfo() {
     int h = 16;
     int t = 6;
     int l = width - w;
+
+    QRect rect = QRect(l - 6, 0, w + 6, h * 5 + 8);
+    painter.fillRect(rect, QBrush(QColor(255, 255, 255, 200)));
+    //painter.fillRect(rect, QBrush(Qt::cyan));
 
     painter.setPen(textPen);
     painter.setFont(textFont);
@@ -904,15 +975,6 @@ void GLWidget::mousePressEvent(QMouseEvent *me) {
 void GLWidget::mouseReleaseEvent(QMouseEvent *me) {
     if(leftBtn && me->button() == Qt::LeftButton) {
         leftBtn = false;
-
-        if (this->cursor().shape() == Qt::ClosedHandCursor) {
-            setCursor(Qt::OpenHandCursor);
-        }
-
-        if (move) {
-            ccx += me->x() - cbx;
-            ccy += me->y() - cby;
-        }
     } else if (wheel && me->button() == Qt::MiddleButton) {
         wheel = false;
 
@@ -929,49 +991,51 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *me) {
 
 //Масштабирование
 void GLWidget::wheelEvent(QWheelEvent *me) {
-    double oldX = (me->x() - gX) * 1.0 / gScale;
-    double oldY = (height - (me->y() - gY)) * 1.0 / gScale;
+    if (!move) {
+        double oldX = (me->x() - gX) * 1.0 / gScale;
+        double oldY = (height - (me->y() - gY)) * 1.0 / gScale;
 
-    double delta = me->delta();
-    gScale *= 1 + delta / 1200.0;
+        double delta = me->delta();
+        gScale *= 1 + delta / 1200.0;
 
-    if (gScale > 55.0) {
-        gScale = 55.0;
-    } else if (gScale < 0.05) {
-        gScale = 0.05;
-    } else if (gScale > 0.9 && gScale < 1.1) {
-        gScale = 1.0;
+        if (gScale > 55.0) {
+            gScale = 55.0;
+        } else if (gScale < 0.05) {
+            gScale = 0.05;
+        } else if (gScale > 0.9 && gScale < 1.1) {
+            gScale = 1.0;
+        }
+
+        //x
+        double newX = (me->x() - gX) * 1.0 / gScale;
+        if (newX < oldX) {
+            while (newX < oldX) {
+                gX--;
+                newX = (me->x() - gX) * 1.0 / gScale;
+            }
+        } else if (newX > oldX) {
+            while (newX > oldX) {
+                gX++;
+                newX = (me->x() - gX) * 1.0 / gScale;
+            }
+        }
+        ccx = gX;
+
+        //y
+        double newY = (height - (me->y() - gY)) * 1.0 / gScale;
+        if (newY < oldY) {
+            while (newY < oldY) {
+                gY++;
+                newY = (height - (me->y() - gY)) * 1.0 / gScale;
+            }
+        } else if (newY > oldY) {
+            while (newY > oldY) {
+                gY--;
+                newY = (height - (me->y() - gY)) * 1.0 / gScale;
+            }
+        }
+        ccy = gY;
+
+        update();
     }
-
-    //x
-    double newX = (me->x() - gX) * 1.0 / gScale;
-    if (newX < oldX) {
-        while (newX < oldX) {
-            gX--;
-            newX = (me->x() - gX) * 1.0 / gScale;
-        }
-    } else if (newX > oldX) {
-        while (newX > oldX) {
-            gX++;
-            newX = (me->x() - gX) * 1.0 / gScale;
-        }
-    }
-    ccx = gX;
-
-    //y
-    double newY = (height - (me->y() - gY)) * 1.0 / gScale;
-    if (newY < oldY) {
-        while (newY < oldY) {
-            gY++;
-            newY = (height - (me->y() - gY)) * 1.0 / gScale;
-        }
-    } else if (newY > oldY) {
-        while (newY > oldY) {
-            gY--;
-            newY = (height - (me->y() - gY)) * 1.0 / gScale;
-        }
-    }
-    ccy = gY;
-
-    update();
 }

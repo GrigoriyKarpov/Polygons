@@ -15,7 +15,7 @@ class GLWidget : public QGLWidget
 
 public:
     GLWidget(QWidget *parent);
-    enum Modes {Draw, Edit, Demo, Move, Demo2};
+    enum Modes {Draw, Edit, Demo, Move, Demo2, Demo3};
     QPen getPolygonPen();
     void setMode(GLWidget::Modes mode);
 
@@ -93,10 +93,15 @@ private:
     void gLine(Point a, Point b);
     void gLine(double a, double b, double c, double d);
 
+    void gVector(Point v);
+    void gVector(Point s, Point v);
+
     void gPoint(Point a);
     void gPoint(double a, double b);
 
     void gPolygon(QVector<Point> polygon, QString name);
+
+    void gConvexPolygon(QPolygon p);
 
     void gText(Point p, QString text);
 

@@ -48,6 +48,7 @@ public:
     static QVector<Point> slipInAngle(Point a0, Point b0, Point c0, double h, double angle, double d1, double d2);
     static double dist(Point a, Point b);
     static double cos(Point a, Point b, Point c);
+    static double cos(Point v1, Point v2);
     static Point distOnSegment(Point a, Point b, Point c, double h);
     static bool intersection(Point a, Point b, Point c, Point d, Point *intersection);
     static Point transformCS(Point p, Point o, double a, double x, double y);
@@ -57,6 +58,9 @@ public:
     static Point polygonCenter(QVector<Point> polygon);
     static Point vector(Point a, Point b);
     static Point polPointText(QVector<Point> polygon, int i, double dist);
+    static Point normal(Point a, Point b);
+    static Point center(Point a, Point b);
+    static QVector<Point> outCharArea(QVector<Point> polygon1, QVector<Point> polygon2, int o);
 };
 
 //

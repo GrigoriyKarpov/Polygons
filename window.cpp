@@ -12,23 +12,24 @@ Window::Window() : QWidget() {
 
     widgetOpenGL = new GLWidget(this);
 
-    drawBtn = new QPushButton("Draw");
+    drawBtn = new QPushButton(QString::fromUtf8("Рисование"));
     drawBtn->setCheckable(true);
-    editBtn = new QPushButton("Edit");
+    editBtn = new QPushButton(QString::fromUtf8("Редактирование"));
     editBtn->setCheckable(true);
-    demoBtn = new QPushButton("Demo");
+    demoBtn = new QPushButton(QString::fromUtf8("Демонстрация"));
     demoBtn->setCheckable(true);
-    moveBtn = new QPushButton("Move");
-    moveBtn->setCheckable(true);
-    saveBtn = new QPushButton("Save");
-    optionBtn = new QPushButton("Options");
+    //moveBtn = new QPushButton("Move");
+    //moveBtn->setCheckable(true);
+    saveBtn = new QPushButton(QString::fromUtf8("Сохранить"));
+    optionBtn = new QPushButton(QString::fromUtf8("Опции"));
     optionBtn->setCheckable(true);
 
     btnsLayout = new QHBoxLayout;
     btnsLayout->addWidget(drawBtn);
     btnsLayout->addWidget(editBtn);
     btnsLayout->addWidget(demoBtn);
-    btnsLayout->addWidget(moveBtn);
+    //btnsLayout->addWidget(moveBtn);
+    btnsLayout->addStretch();
     btnsLayout->addWidget(saveBtn);
     btnsLayout->addWidget(optionBtn);
 
@@ -48,7 +49,7 @@ Window::Window() : QWidget() {
     //Переключение режимов
     connect(drawBtn, SIGNAL(clicked()), this, SLOT(drawBtnClick()));
     connect(editBtn, SIGNAL(clicked()), this, SLOT(editBtnClick()));
-    connect(moveBtn, SIGNAL(clicked()), this, SLOT(moveBtnClick()));
+    //connect(moveBtn, SIGNAL(clicked()), this, SLOT(moveBtnClick()));
     connect(demoBtn, SIGNAL(clicked()), this, SLOT(demoBtnClick()));
 
     //
@@ -69,31 +70,31 @@ void Window::optionBtnClick() {
 void Window::drawBtnClick() {
     widgetOpenGL->setMode(GLWidget::Draw);
     editBtn->setChecked(false);
-    moveBtn->setChecked(false);
+    //moveBtn->setChecked(false);
     demoBtn->setChecked(false);
 }
 
 void Window::editBtnClick() {
     widgetOpenGL->setMode(GLWidget::Edit);
     drawBtn->setChecked(false);
-    moveBtn->setChecked(false);
+    //moveBtn->setChecked(false);
     demoBtn->setChecked(false);
 }
 
 void Window::saveBtnClick() {
 }
 
-void Window::moveBtnClick()
-{
-    widgetOpenGL->setMode(GLWidget::Move);
-}
+//void Window::moveBtnClick()
+//{
+//    widgetOpenGL->setMode(GLWidget::Move);
+//}
 
 void Window::demoBtnClick()
 {
     widgetOpenGL->setMode(GLWidget::Demo);
     drawBtn->setChecked(false);
     editBtn->setChecked(false);
-    moveBtn->setChecked(false);
+    //moveBtn->setChecked(false);
 }
 
 void Window::moveToCenter() {
