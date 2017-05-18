@@ -1,15 +1,22 @@
-QT          += opengl
+QT        += opengl
 
-HEADERS     =   window.h \
-                dialog.h \
-                glwidget.h \
-    tools.h
 
-SOURCES     =   main.cpp \
-                window.cpp \
-                dialog.cpp \
-                glwidget.cpp \
-    tools.cpp
 
-RESOURCES += \
-    Resources/Icons/Icons.qrc
+HEADERS   += window.h \
+			 dialog.h \
+			 glwidget.h \
+			 Geometry/tools.h \
+                         Geometry/vector.h \
+    Geometry/point.h \
+    Geometry/polygon.h
+
+SOURCES   += main.cpp \
+			 window.cpp \
+			 dialog.cpp \
+			 glwidget.cpp \
+			 Geometry/tools.cpp \
+                         Geometry/vector.cpp \
+    Geometry/point.cpp \
+    Geometry/polygon.cpp
+
+RESOURCES += Resources/Icons/Icons.qrc

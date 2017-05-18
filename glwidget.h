@@ -1,8 +1,8 @@
 #ifndef GLWIDGET_H
 #define GLWIDGET_H
 
-#include "tools.h"
-#include <options.h>
+#include "Geometry/tools.h"
+#include "Geometry/polygon.h"
 #include <QGLWidget>
 #include <QBrush>
 #include <QFont>
@@ -99,11 +99,20 @@ private:
     void gPoint(Point a);
     void gPoint(double a, double b);
 
-    void gPolygon(QVector<Point> polygon, QString name);
+    void gPolygon(Polygon::Polygon p);
+    void gPolygon(Polygon::Polygon p, QString name);
+    void gPolygon(Polygon::Polygon p, QBrush fill);
+    //void gPolygon(QVector<Point> polygon, QPen pen);
+    //void gPolygon(QVector<Point> polygon, QPen, QBrush fill);
+    //void gPolygon(QVector<Point> polygon, QString name, QBrush fill);
+    //void gPolygon(QVector<Point> polygon, QString name, QPen pen);
+    //void gPolygon(QVector<Point> polygon, QString name, QPen pen, QBrush fill);
 
     void gConvexPolygon(QPolygon p);
 
     void gText(Point p, QString text);
+
+    void drawGrid();
 
     QPoint gQPoint(Point a);
 

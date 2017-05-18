@@ -1,70 +1,10 @@
 #include "tools.h"
+#include "point.h"
+
 #include <qmath.h>
-#include <QDebug>
+#include <QPair>
+#include <QVector>
 
-//Point
-Point::Point():x(0),y(0){}
-
-Point::Point(double x, double y) {
-    this->x = x;
-    this->y = y;
-}
-
-double Point::getX() {
-    return this->x;
-}
-
-double Point::getY() {
-    return this->y;
-}
-
-void Point::setX(double x) {
-    this->x = x;
-}
-
-void Point::setY(double y) {
-    this->y = y;
-}
-
-QString Point::toString() {
-    QString result;
-    result.sprintf("(%.1f; %.1f)", this->x, this->y);
-    return result;
-}
-
-//Line
-Line::Line(Point a, Point b) {
-    this->a = a;
-    this->b = b;
-}
-
-Point Line::getA() {
-    return this->a;
-}
-
-Point Line::getB() {
-    return this->b;
-}
-
-void Line::setA(Point a) {
-    this->a = a;
-}
-
-void Line::setB(Point b) {
-    this->b = b;
-}
-
-QString Line::toString() {
-    QString result = "Line( " +
-            QString::number(this->a.getX()) + " ; " +
-            QString::number(this->a.getY()) + " ; " +
-            QString::number(this->b.getX()) + " ; " +
-            QString::number(this->b.getY()) + " )";
-
-    return result;
-}
-
-//Tools
 QVector<Point> Tools::slipInAngle(Point a0, Point b0, Point c0, double h, double angle, double d1, double d2) {
     QVector<Point> result;
     Point r, q, m, t, c, o;
@@ -235,67 +175,41 @@ bool Tools::llInter(Point a, Point b, Point c, Point d, Point *p) {
     return true;
 }
 
-Point Tools::polygonCenter(QVector<Point> polygon) {
-    double cx = 0;
-    double cy = 0;
+Point Tools::polPointText(Polygon p, int i, double dist) {
+    Vector v = Vector(p.center(), p[i]);
 
-
-    for (int i = 0; i < polygon.count(); i++) {
-        cx += polygon[i].getX();
-        cy += polygon[i].getY();
-    }
-
-    cx /= polygon.count();
-    cy /= polygon.count();
-
-    return Point(cx, cy);
-}
-
-Point Tools::vector(Point a, Point b) {
-    return Point(b.getX() - a.getX(), b.getY() - a.getY());
-}
-
-Point Tools::polPointText(QVector<Point> polygon, int i, double dist) {
-    Point v = Tools::vector(Tools::polygonCenter(polygon), polygon[i]);
-
-    double x = polygon[i].getX() + dist * v.getX() / Tools::dist(Tools::polygonCenter(polygon), polygon[i]);
-    double y = polygon[i].getY() + dist * v.getY() / Tools::dist(Tools::polygonCenter(polygon), polygon[i]);
+    double x = p[i].getX() + dist * v.getX() / Tools::dist(p.center(), p[i]);
+    double y = p[i].getY() + dist * v.getY() / Tools::dist(p.center(), p[i]);
 
     return Point(x, y);
 }
 
-Point Tools::normal(Point a, Point b) {
-    return Point(a.getY() - b.getY(), b.getX() - a.getX());
-}
+Polygon Tools::outCharArea(Polygon p1, Polygon p2, int o) {
+    //1 Нормали многоугольников
+    Polygon result;
+    QVector< QPair< int, Point > > charPoints;
+    QVector<Vector> n;
+    QVector<Vector> m;
 
-Point Tools::center(Point a, Point b) {
-    return Point((a.getX() + b.getX()) / 2.0, (a.getY() + b.getY()) / 2.0);
-}
-
-QVector<Point> Tools::outCharArea(QVector<Point> polygon1, QVector<Point> polygon2, int o) {
-    //1. Нормали
-    QVector<Point> n;
-    for (int i = 0; i < polygon1.count(); i++) {
+    for (int i = 0; i < p1.count(); i++) {
         int j = i + 1;
-        if (i == polygon1.count() - 1) {
+        if (i == p1.count() - 1) {
             j = 0;
         }
 
-        n.push_back(Tools::normal(polygon1[i], polygon1[j]));
+        n.push_back(Vector::normal(p1[i], p1[j]));
     }
 
-    QVector<Point> m;
-    for (int i = 0; i < polygon2.count(); i++) {
+    for (int i = 0; i < p2.count(); i++) {
         int j = i + 1;
-        if (i == polygon2.count() - 1) {
+        if (i == p2.count() - 1) {
             j = 0;
         }
 
-        m.push_back(Tools::normal(polygon2[i], polygon2[j]));
+        m.push_back(Vector::normal(p2[i], p2[j]));
     }
 
-    //2   Нахождение векторов движения
-    QVector< QPair< int, Point > > s;
+    //2 Нахождение векторов движения
 
     //2.1 Для каждого ребра неподв. находим верш. подвиж. которая может скользить по нему
     for (int i = 0; i < n.count(); i++) {
@@ -304,26 +218,26 @@ QVector<Point> Tools::outCharArea(QVector<Point> polygon1, QVector<Point> polygo
             j = 0;
         }
 
-        for (int k = 0; k < polygon2.count(); k++) {
+        for (int k = 0; k < p2.count(); k++) {
             int t = k + 1;
-            if (k == polygon2.count() - 1) {
+            if (k == p2.count() - 1) {
                 t = 0;
             }
             int l = k - 1;
             if (k == 0) {
-                l = polygon2.count() - 1;
+                l = p2.count() - 1;
             }
 
             //Находим углы
-            double a1 = Tools::cos(n[i], Tools::vector(polygon2[k], polygon2[t]));
-            double a2 = Tools::cos(n[i], Tools::vector(polygon2[k], polygon2[l]));
+            double a1 = n[i].cos(Vector(p2[k], p2[t]));
+            double a2 = n[i].cos(Vector(p2[k], p2[l]));
 
             //Находим вершину, которая может скользить
             if (a1 >= 0 && a2 >= 0) {
-                Point v2 = Tools::vector(polygon2[k], polygon2[o]);
-                v2.shift(polygon1[j]);
+                Point v2 = p1[j];
+                v2 = Vector(p2[k], p2[o]).translate(v2);
 
-                s.push_back(QPair< int, Point >(i, v2));
+                charPoints.push_back(QPair< int, Point >(i, v2));
 
                 break;
             }
@@ -337,26 +251,26 @@ QVector<Point> Tools::outCharArea(QVector<Point> polygon1, QVector<Point> polygo
             j = 0;
         }
 
-        for (int k = 0; k < polygon1.count() - 1; k++) {
+        for (int k = 0; k < p1.count() - 1; k++) {
             int t = k + 1;
-            if (k == polygon1.count() - 1) {
+            if (k == p1.count() - 1) {
                 t = 0;
             }
             int l = k - 1;
             if (k == 0) {
-                l = polygon1.count() - 1;
+                l = p1.count() - 1;
             }
 
             //Находим углы
-            double a1 = Tools::cos(m[i], Tools::vector(polygon1[k], polygon1[t]));
-            double a2 = Tools::cos(m[i], Tools::vector(polygon1[k], polygon1[l]));
+            double a1 = m[i].cos(Vector(p1[k], p1[t]));
+            double a2 = m[i].cos(Vector(p1[k], p1[l]));
 
             //Находим вершину, которая может скользить
             if (a1 >= 0 && a2 >= 0) {
-                Point v2 = Tools::vector(polygon2[j], polygon2[o]);
-                v2.shift(polygon1[k]);
+                Point v2 = p1[k];
+                v2 = Vector(p2[j], p2[o]).translate(v2);
 
-                s.push_back(QPair< int, Point >(k, v2));
+                charPoints.push_back(QPair< int, Point >(k, v2));
 
                 break;
             }
@@ -364,48 +278,24 @@ QVector<Point> Tools::outCharArea(QVector<Point> polygon1, QVector<Point> polygo
     }
 
 
-    //3.	Построим характеристический многоугольник, для этого упорядочим пары
-    QVector<Point> charArea;
-    for (int i = 0; i < polygon1.count(); i++) {
-        for (int j = s.count() - 1; j >= 0 ; j--) {
-            if (s[j].first == i) {
-                charArea.push_back(s[j].second);
+    //3. Построим характеристический многоугольник, для этого упорядочим пары
+    for (int i = 0; i < p1.count(); i++) {
+        for (int j = charPoints.count() - 1; j >= 0 ; j--) {
+            if (charPoints[j].first == i) {
+                result.addPoint(charPoints[j].second);
             }
         }
     }
 
-    return charArea;
-}
-
-//Здвиг точки
-void Point::shift(Point s) {
-    this->x += s.getX();
-    this->y += s.getY();
-}
-
-void Point::shift(double x, double y) {
-    this->x += x;
-    this->y += y;
+    return result;
 }
 
 //Косинус угла abc
 double Tools::cos(Point a, Point b, Point c) {
-    Point v1 = Point(a.getX() - b.getX(), a.getY() - b.getY());
-    Point v2 = Point(c.getX() - b.getX(), c.getY() - b.getY());
+    Vector v1 = Vector(b, a);
+    Vector v2 = Vector(b, c);
 
-    return cos(v1, v2);
-}
-
-double Tools::cos(Point v1, Point v2) {
-
-    double a = v1.getX() * v2.getX() + v1.getY() * v2.getY();
-
-    double b = qSqrt(qPow(v1.getX(), 2) + qPow(v1.getY(), 2)) *
-                qSqrt(qPow(v2.getX(), 2) + qPow(v2.getY(), 2));
-
-    //qDebug() << b;
-
-    return a / b;
+    return v1.cos(v2);
 }
 
 //расстояние между двумя точками

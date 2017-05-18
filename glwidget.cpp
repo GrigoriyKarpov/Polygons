@@ -1,6 +1,8 @@
 #include <QtGui>
 #include "glwidget.h"
-#include "tools.h"
+#include "Geometry/tools.h"
+#include "Geometry/point.h"
+#include "Geometry/polygon.h"
 
 #include <QPainter>
 #include <QtCore/qmath.h>
@@ -68,41 +70,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
     //painter.save();
 
     if (axis) {
-        int startX =  -gX / gScale;
-        int endX   = (-gX + width) / gScale;
-        int startY =   gY / gScale;
-        int endY   =  (gY + height) / gScale;
-        int step   =   50;
-
-        while (qFabs(endX - startX) / step > 50) {
-            step *= 2;
-        }
-        while (qFabs(endX - startX) / step < 4) {
-            step /= 4;
-        }
-
-        //Сетка
-        painter.setPen(QPen(QColor(225, 225, 225), 1, Qt::SolidLine));
-        //Горизонтальные линии
-        for (int i = 0; i < endY; i += step) {
-            gLine(startX, i, endX, i);
-        }
-        for (int i = 0; i > startY; i -= step) {
-            gLine(startX, i, endX, i);
-        }
-
-        //Вертикальные линии
-        for (int i = 0; i < endX; i += step) {
-            gLine(i, startY, i, endY);
-        }
-        for (int i = 0; i > startX; i -= step) {
-            gLine(i, startY, i, endY);
-        }
-
-        //Оси
-        painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine));
-        gLine(startX, 0, endX, 0);
-        gLine(0, startY, 0, endY);
+        drawGrid();
     }
 
     if (mode == Demo) {
@@ -470,27 +438,13 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         polygon2.push_back(Point(230.0, 80.0));
         polygon2.push_back(Point(260.0, 10.0));
 
-        QVector<Point> outCharArea = Tools::outCharArea(polygon1, polygon2, 3);
+        Polygon::Polygon outCharArea = Tools::outCharArea(polygon1, polygon2, 3);
 
         //Визуализация
-        //Полигоны
         gPolygon(polygon1, "A");
         gPolygon(polygon2, "B");
 
-        gPolygon(outCharArea, "C");
-
-        //3.
-        QPolygon area1;
-
-        for (int i = 0; i < outCharArea.count(); i++) {
-            area1 << gQPoint(outCharArea[i]);
-        }
-
-        QPainterPath areaPath1;
-        areaPath1.addPolygon(area1);
-        QBrush fillBrush1(QColor(255, 90, 90, 255), Qt::BDiagPattern);
-        painter.fillPath(areaPath1, fillBrush1);
-
+        gPolygon(outCharArea, QBrush(QColor(255, 90, 90, 255), Qt::BDiagPattern));
     }
 
     if (mode == Draw) {
@@ -719,20 +673,24 @@ void GLWidget::gPoint(double a, double b) {
                       height - b * gScale + gY);
 }
 
-void GLWidget::gPolygon(QVector<Point> polygon, QString name) {
+void GLWidget::gPolygon(Polygon::Polygon p) {
     //Грани и вершины
-    for (int i = 0; i < polygon.count(); i++) {
+    for (int i = 0; i < p.count(); i++) {
         int j = i + 1;
-        if (i == polygon.count() - 1) {
+        if (i == p.count() - 1) {
             j = 0;
         }
 
         painter.setPen(polygonPen);
-        gLine(polygon[i], polygon[j]);
+        gLine(p[i], p[j]);
 
         painter.setPen(QPen(Qt::black, 8, Qt::SolidLine, Qt::RoundCap));
-        gPoint(polygon[i]);
+        gPoint(p[i]);
     }
+}
+
+void GLWidget::gPolygon(Polygon::Polygon p, QString name) {
+    gPolygon(p);
 
     //Подписи
     QPen textPolygonPen = QPen();
@@ -751,8 +709,8 @@ void GLWidget::gPolygon(QVector<Point> polygon, QString name) {
 
     double dist = 13.0 / gScale;
 
-    for (int i = 0; i < polygon.count(); i++) {
-        Point c = Tools::polPointText(polygon, i, dist);
+    for (int i = 0; i < p.count(); i++) {
+        Point c = Tools::polPointText(p, i, dist);
         painter.setFont(polygonFont1);
         gText(c, name);
 
@@ -762,7 +720,21 @@ void GLWidget::gPolygon(QVector<Point> polygon, QString name) {
     }
 
     painter.setFont(polygonFont3);
-    gText(Tools::polygonCenter(polygon), name);
+    gText(p.center(), name);
+}
+
+void GLWidget::gPolygon(Polygon::Polygon p, QBrush fill) {
+    QPolygon area;
+
+    for (int i = 0; i < p.count(); i++) {
+        area << gQPoint(p[i]);
+    }
+
+    QPainterPath areaPath;
+    areaPath.addPolygon(area);
+    painter.fillPath(areaPath, fill);
+
+    gPolygon(p);
 }
 
 void GLWidget::gConvexPolygon(QPolygon p) {
@@ -787,6 +759,82 @@ void GLWidget::gText(Point p, QString text) {
 
     //painter.fillRect(rect, QBrush(Qt::cyan));
     painter.drawText(rect, Qt::AlignCenter, text);
+}
+
+void GLWidget::drawGrid() {
+    int startX =  -gX / gScale - 1;
+    int endX   = (-gX + width) / gScale + 1;
+    int startY =   gY / gScale - 1;
+    int endY   =  (gY + height) / gScale + 1;
+    int step   =   50;
+
+    while (qFabs(endX - startX) / step > 50) {
+        step *= 2;
+    }
+    while (qFabs(endX - startX) / step < 4) {
+        step /= 4;
+    }
+
+    //Сетка
+    painter.setPen(QPen(QColor(225, 225, 225), 1, Qt::SolidLine));
+    //Горизонтальные линии
+    for (int i = 0; i < endY; i += step) {
+        gLine(startX, i, endX, i);
+    }
+    for (int i = 0; i > startY; i -= step) {
+        gLine(startX, i, endX, i);
+    }
+
+    //Вертикальные линии
+    for (int i = 0; i < endX; i += step) {
+        gLine(i, startY, i, endY);
+    }
+    for (int i = 0; i > startX; i -= step) {
+        gLine(i, startY, i, endY);
+    }
+
+    //Оси
+    painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine));
+    gLine(startX, 0, endX, 0);
+    gLine(0, startY, 0, endY);
+
+    //Подписи
+    int axisFontSize = 20;
+    QFont axisFont;
+    axisFont.setPixelSize(axisFontSize);
+
+    painter.setFont(axisFont);
+
+    //Центр координат
+    painter.drawText(QRect(gX - axisFontSize - 4, height + gY,
+                           axisFontSize, axisFontSize + 4), Qt::AlignRight, "O");
+
+    //Ось x
+    if (gX < width - axisFontSize) {
+        painter.drawText(QRect(width - axisFontSize - 4, height + gY,
+                               axisFontSize, axisFontSize + 4), Qt::AlignRight, "x");
+    } else {
+        painter.drawText(QRect(gX - 4, height + gY,
+                               axisFontSize, axisFontSize + 4), Qt::AlignRight, "x");
+    }
+        log.push_back(QString::number(gX));
+
+    //Ось y
+    if (gY > -height + axisFontSize + 6) {
+        painter.drawText(QRect(gX - axisFontSize - 4, -2, axisFontSize,
+                               axisFontSize + 4), Qt::AlignRight, "y");
+    } else {
+        painter.drawText(QRect(gX - axisFontSize - 4, height + gY - axisFontSize - 8,
+                               axisFontSize, axisFontSize + 4), Qt::AlignRight, "y");
+    }
+
+    //Размеры клетки
+    axisFont.setPixelSize(axisFontSize - 6);
+    painter.setFont(axisFont);
+    painter.setPen(QPen(QColor(225, 225, 225), 1, Qt::SolidLine));
+
+    gText(Point(step, (-axisFontSize + 4) / gScale), QString::number(step));
+    gText(Point((-axisFontSize + 4) / gScale, step), QString::number(step));
 }
 
 QPoint GLWidget::gQPoint(Point a) {
