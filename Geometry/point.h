@@ -2,6 +2,7 @@
 #define POINT_H
 
 #include <QString>
+#include <QPointF>
 
 //Point
 class Point {
@@ -17,12 +18,28 @@ public:
     double getY();
     void setX(double x);
     void setY(double y);
-    void shift(Point s);
-    void shift(double x, double y);
+    double &rx();
+    double &ry();
 
-    const Point operator+  (const Point & p);
-    Point &operator+= (Point & p);
+    double dist(Point p);
+
+    Point operator+  (Point p);
+    Point operator+  (double d);
+    Point operator-  (Point p);
+    Point operator-  (double d);
+    Point operator*  (double d);
+    Point operator/  (double d);
+
+    Point &operator+= (Point p);
+    Point &operator+= (double d);
+    Point &operator-= (Point p);
+    Point &operator-= (double d);
+    Point &operator*= (double d);
     Point &operator/= (double d);
+
+    Point &operator= (const QPointF & p);
+
+    static Point toPoint(const QPointF & p);
 
     QString toString();
 };

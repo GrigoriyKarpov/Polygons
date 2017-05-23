@@ -3,6 +3,7 @@
 
 #include "Geometry/tools.h"
 #include "Geometry/polygon.h"
+#include "Geometry/setofpolygons.h"
 #include <QGLWidget>
 #include <QBrush>
 #include <QFont>
@@ -25,70 +26,99 @@ public slots:
 
 protected:
     void paintEvent(QPaintEvent *event);
-    void mouseMoveEvent(QMouseEvent *me);       // Метод реагирует на перемещение указателя, но по умолчанию setMouseTracking(false)
-    void mousePressEvent(QMouseEvent *me);      // Реагирует на нажатие кнопок мыши
-    void mouseReleaseEvent(QMouseEvent *me);    // Метод реагирует на "отжатие" кнопки мыши
+
+    //События с мышью
+    void mouseMoveEvent(QMouseEvent *me);
+    void mousePressEvent(QMouseEvent *me);
+    void mouseReleaseEvent(QMouseEvent *me);
     void wheelEvent(QWheelEvent *me);
 
 private:
-    //Переменные для перемещения вида
-    int gX;
-    int gY;
-    int cbx;
-    int cby;
-    int ccx;
-    int ccy;
-
-    double gScale;
-
     //Ширина и высота виджета
-    int height;
-    int width;
+    int widgetHeight;
+    int widgetWidth;
 
-    //Таймер для анимации
-    int elapsed;
+    //Режим
+    Modes mode;
 
-    //Текущие координаты мыши на виджете
-    int cax;
-    int cay;
+    //Навигация и управление
+    //Текущее положение указателя мыши в мировых координатах
+    Point gPos;
+    //Текущее положение указателя мыши в координатах виджета
+    Point mPos;
+
+    //Инструмент перемещение вида
+    //Включение режима перемещения вида
+    bool move;
+
+    //Сдвиг экранных координат относительно мировых
+    Point shiftView;
+    Point shiftBeforMove;
+    Point startMovePos;
+    Point shiftPos3;
+
+    //Кнопки мыши
+    bool leftBtn;
+    bool rightBtn;
+    bool wheel;
+
+    //Коэффициент масштабирования экранных координат относительно мировых
+    double gScale;
+    double minScale;
+    double maxScale;
 
     //Радиус выделения вершины
-    int active;
+    int activationRadius;
+
+    //Анимация
+    int elapsed;
+    int animationSuperior;
 
     //Флажки
     bool inter_f;
     bool slip;
     bool axis;
-    bool move;
-    bool leftBtn;
-    bool wheel;
     bool crossroad;
     bool shortEdge;
-    Modes mode;
+    bool showLog;
 
-    //Инструменты рисования
+    //Рисование
     QPainter painter;
+
     QFont textFont;
     QPen textPen;
     QPen polygonPen;
-    QPen circlePen;
+    QPen unacceptablePen;
+    QPen activePen;
     QPen crossroadPen;
 
-    //Массив добавленных вершин
+    //Данные
+    SetOfPolygons setOfPolygons;
+    Polygon::Polygon p1;
     QVector<QVector <int> > points;
     QVector<Point> path;
     QVector<Point> inter;
     QVector<int> inter1;
 
+    //Активные элементы данных
     int activePoint;
+    int activePolygon;
 
-    bool isCrossroad();
-
+    //Индексы
     int ii;
     int ij;
     int ik;
 
+    //Сообщения
     QVector<QString> log;
+
+    //Визуализация элементов
+    Point toMPoint(Point p); //Перевод из мировых координат в эранные
+    Point toGPoint(Point p); //Перевод из экранных координат в мировые
+    Point toGPoint(QPoint p); //
+
+    void gPoint(Point a);
+    void gPoint(double a, double b);
 
     void gLine(Point a, Point b);
     void gLine(double a, double b, double c, double d);
@@ -96,10 +126,8 @@ private:
     void gVector(Point v);
     void gVector(Point s, Point v);
 
-    void gPoint(Point a);
-    void gPoint(double a, double b);
-
     void gPolygon(Polygon::Polygon p);
+    void gPolygon(Polygon::Polygon p, bool close);
     void gPolygon(Polygon::Polygon p, QString name);
     void gPolygon(Polygon::Polygon p, QBrush fill);
     //void gPolygon(QVector<Point> polygon, QPen pen);
@@ -108,9 +136,12 @@ private:
     //void gPolygon(QVector<Point> polygon, QString name, QPen pen);
     //void gPolygon(QVector<Point> polygon, QString name, QPen pen, QBrush fill);
 
-    void gConvexPolygon(QPolygon p);
+    void gPolygon(QPolygon p);
 
     void gText(Point p, QString text);
+
+    //Выделение вокруг активной точки
+    void gActive();
 
     void drawGrid();
 

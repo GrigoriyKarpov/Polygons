@@ -10,6 +10,11 @@ Vector::Vector(double x, double y) {
     this->y = y;
 }
 
+Vector::Vector(Point p) {
+    this->x = p.getX();
+    this->y = p.getY();
+}
+
 Vector::Vector(Point p1, Point p2) {
     this->x = p2.getX() - p1.getX();
     this->y = p2.getY() - p1.getY();
@@ -59,6 +64,12 @@ double Vector::cos(Vector v) {
                 qSqrt(qPow(v.getX(), 2) + qPow(v.getY(), 2));
 
     return a / b;
+}
+
+double Vector::angle(Vector v) {
+    double result = qAcos(cos(v));
+
+    return result;
 }
 
 Point Vector::translate(Point p) {

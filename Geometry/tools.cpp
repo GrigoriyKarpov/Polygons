@@ -75,37 +75,6 @@ Point Tools::distOnSegment(Point a, Point b, Point c, double h) {
     return Q;
 }
 
-bool Tools::intersection(Point a, Point b, Point c, Point d, Point *intersection) {
-    Point dir1 = Point(b.getX() - a.getX(), b.getY() - a.getY());
-    Point dir2 = Point(d.getX() - c.getX(), d.getY() - c.getY());
-
-    //считаем уравнения прямых проходящих через отрезки
-    double a1 = -dir1.getY();
-    double b1 = +dir1.getX();
-    double c1 = -(a1*a.getX() + b1*a.getY());
-
-    double a2 = -dir2.getY();
-    double b2 = +dir2.getX();
-    double c2 = -(a2*c.getX() + b2*c.getY());
-
-    //подставляем концы отрезков, для выяснения в каких полуплоскотях они
-    double seg1_line2_start = a2*a.getX() + b2*a.getY() + c2;
-    double seg1_line2_end = a2*b.getX() + b2*b.getY() + c2;
-
-    double seg2_line1_start = a1*c.getX() + b1*c.getY() + c1;
-    double seg2_line1_end = a1*d.getX() + b1*d.getY() + c1;
-
-    //если концы одного отрезка имеют один знак, значит он в одной полуплоскости и пересечения нет.
-    if (seg1_line2_start * seg1_line2_end >= 0 || seg2_line1_start * seg2_line1_end >= 0) {
-        return false;
-    }
-
-    double u = seg1_line2_start / (seg1_line2_start - seg1_line2_end);
-    *intersection =  Point(dir1.getX() * u + a.getX(), dir1.getY() * u + a.getY());
-
-    return true;
-}
-
 //Преобразование системы координат
 Point Tools::transformCS(Point p, Point o, double a, double x, double y) {
     Point result;
@@ -145,10 +114,38 @@ int Tools::outPoint(Point a, Point b, Point c) {
     return result;
 }
 
+double Tools::slope(Point a, Point b) {
+    return (b.getY() - a.getY()) / (b.getX() / a.getX());
+}
+
 //Пересечение 2-х прямых
-bool Tools::llInter(Point a, Point b, Point c, Point d, Point *p) {
-    Point dir1 = Point(b.getX() - a.getX(), b.getY() - a.getY());
-    Point dir2 = Point(d.getX() - c.getX(), d.getY() - c.getY());
+bool Tools::lineIntersect(Point a, Point b, Point c, Point d, Point *p) {
+    //Прямые параллельны, если у них одинаковый угловой коэффициент
+    if (slope(a, b) == slope(c, d)) {
+        return false;
+    }
+
+    Vector dir1 = Vector(a, b);
+    Vector dir2 = Vector(c, d);
+
+    double a2 = -dir2.getY();
+    double b2 = +dir2.getX();
+    double c2 = -(a2 * c.getX() + b2 * c.getY());
+
+    double seg1_line2_start = a2 * a.getX() + b2 * a.getY() + c2;
+    double seg1_line2_end   = a2 * b.getX() + b2 * b.getY() + c2;
+
+    double u = seg1_line2_start / (seg1_line2_start - seg1_line2_end);
+
+    *p = Point(dir1.getX() * u + a.getX(), dir1.getY() * u + a.getY());
+
+    return true;
+}
+
+//Пересечение отрезков
+bool Tools::segmentIntersect(Point a, Point b, Point c, Point d, Point *intersection) {
+    Vector dir1 = Vector(a, b);
+    Vector dir2 = Vector(c, d);
 
     //считаем уравнения прямых проходящих через отрезки
     double a1 = -dir1.getY();
@@ -157,31 +154,24 @@ bool Tools::llInter(Point a, Point b, Point c, Point d, Point *p) {
 
     double a2 = -dir2.getY();
     double b2 = +dir2.getX();
-    double c2 = -(a2*c.getX() + b2*c.getY());
+    double c2 = -(a2 * c.getX() + b2 * c.getY());
 
     //подставляем концы отрезков, для выяснения в каких полуплоскотях они
-    double seg1_line2_start = a2*a.getX() + b2*a.getY() + c2;
-    double seg1_line2_end = a2*b.getX() + b2*b.getY() + c2;
+    double seg1_line2_start = a2 * a.getX() + b2 * a.getY() + c2;
+    double seg1_line2_end   = a2 * b.getX() + b2 * b.getY() + c2;
 
-    double u = seg1_line2_start / (seg1_line2_start - seg1_line2_end);
+    double seg2_line1_start = a1 * c.getX() + b1 * c.getY() + c1;
+    double seg2_line1_end   = a1 * d.getX() + b1 * d.getY() + c1;
 
-    //Прямые параллельны
-    if (u == INFINITY) {
+    //если концы одного отрезка имеют один знак, значит он в одной полуплоскости и пересечения нет.
+    if (seg1_line2_start * seg1_line2_end >= 0 || seg2_line1_start * seg2_line1_end >= 0) {
         return false;
     }
 
-    *p = Point(dir1.getX() * u + a.getX(), dir1.getY() * u + a.getY());
+    double u = seg1_line2_start / (seg1_line2_start - seg1_line2_end);
+    *intersection =  Point(dir1.getX() * u + a.getX(), dir1.getY() * u + a.getY());
 
     return true;
-}
-
-Point Tools::polPointText(Polygon p, int i, double dist) {
-    Vector v = Vector(p.center(), p[i]);
-
-    double x = p[i].getX() + dist * v.getX() / Tools::dist(p.center(), p[i]);
-    double y = p[i].getY() + dist * v.getY() / Tools::dist(p.center(), p[i]);
-
-    return Point(x, y);
 }
 
 Polygon Tools::outCharArea(Polygon p1, Polygon p2, int o) {
@@ -296,10 +286,4 @@ double Tools::cos(Point a, Point b, Point c) {
     Vector v2 = Vector(b, c);
 
     return v1.cos(v2);
-}
-
-//расстояние между двумя точками
-double Tools::dist(Point a, Point b) {
-    return qSqrt(qPow((a.getX() - b.getX()), 2) +
-                 qPow((a.getY() - b.getY()),2));
 }

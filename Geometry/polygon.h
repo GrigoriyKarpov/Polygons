@@ -12,13 +12,18 @@ public:
     Polygon();
     Polygon(QVector<Point> points);
 
-    Point& operator[] (int n);
-
-    int count();
-
     void addPoint(Point p);
+    int count();
+    void clear();
+    void removeLast();
     Point center();
     QString toString();
+    Point pointLabel(int i, double dist);
+
+    bool isConvex();
+    bool isPolygon();
+
+    Point& operator[] (int n);
 };
 
 #endif // POLYGON_H

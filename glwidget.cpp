@@ -14,33 +14,36 @@
 GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {
     //Настройки виджета
-    height = 600;
-    width = 800;
+    widgetHeight = 600;
+    widgetWidth = 800;
 
-    setFixedSize(width, height);
+    setFixedSize(widgetWidth, widgetHeight);
     setMouseTracking(true);
 
-    //Инициализация переменных
-    cax = 0;
-    cay = 0;
+    activePolygon = 0;
+    setOfPolygons = SetOfPolygons();
 
+    //Инициализация переменных
     elapsed = 0;
 
-    gX = width / 2;
-    gY = - height / 2;
-    cbx = 0;
-    cby = 0;
-    ccx = width / 2;
-    ccy = - height / 2;
+    gPos = Point();
+    mPos = Point();
+    shiftView = Point(widgetWidth / 2, -widgetHeight / 2);
+    startMovePos = Point();
+    shiftPos3 = shiftView;
 
     gScale = 1.0;
+    minScale = 0.01;
+    maxScale = 10.0;
 
     ii = 0;
     ij = 1;
     ik = 2;
 
-    active = 8;         //По умолчанию = 8
+    activationRadius  = 10;
     activePoint = -1;
+
+    animationSuperior = 100;
 
     inter_f = true;
     slip = false;
@@ -48,26 +51,36 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
     move = false;
     crossroad = false;
     leftBtn = false;
+    rightBtn = false;
+    showLog = true;
+
     wheel = false;
     shortEdge = false;
-    mode = Demo3;
+    setMode(Draw);
 
     textPen = QPen(QColor(96, 96, 96));
     textFont.setPixelSize(12);
     polygonPen = QPen(Qt::black, 3, Qt::SolidLine, Qt::RoundCap);
-    circlePen = QPen(Qt::red, 2, Qt::SolidLine, Qt::RoundCap);
+    unacceptablePen = QPen(Qt::red, 3, Qt::DotLine, Qt::RoundCap);
+    activePen = QPen(Qt::red, 2, Qt::SolidLine, Qt::RoundCap);
     crossroadPen = QPen(Qt::red, 2, Qt::DotLine, Qt::RoundCap);
 }
 
-
 void GLWidget::paintEvent(QPaintEvent *event) {
+//    log.push_back("gPos           = " + gPos.toString());
+//    log.push_back("mPos           = " + mPos.toString());
+//    log.push_back("shiftView      = " + shiftView.toString());
+//    log.push_back("startMovePos   = " + startMovePos.toString());
+//    log.push_back("shiftBeforMove = " + shiftBeforMove.toString());
+//    log.push_back("shiftPos3      = " + shiftPos3.toString());
+//    log.push_back("");
+//    Point ttt = mPos - startMovePos;
+//    log.push_back("mPos - startMovePos = " + ttt.toString());
+
     painter.begin(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    painter.fillRect(0, 0, width, height, QBrush(Qt::white));
-    //painter.translate(300, 300);
-
-    //painter.save();
+    painter.fillRect(event->rect(), QBrush(Qt::white));
 
     if (axis) {
         drawGrid();
@@ -114,9 +127,9 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                     il = 0;
                 }
 
-                if (Tools::dist(polygon[ij], polygon[ik]) < h &&
-                    Tools::dist(polygon[ij], polygon[ik]) <= Tools::dist(polygon[ij], q) &&
-                    Tools::dist(polygon[il], polygon[ik]) <= Tools::dist(polygon[il], q) + 1) {
+                if (polygon[ij].dist(polygon[ik]) < h &&
+                    polygon[ij].dist(polygon[ik]) <= polygon[ij].dist(q) &&
+                    polygon[il].dist(polygon[ik]) <= polygon[il].dist(q) + 1) {
                     shortEdge = true;
                 }
 
@@ -124,7 +137,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                     //log.push_back("true");
                     Point v_point;
 
-                    if (Tools::llInter(polygon[ii], polygon[ij], polygon[ik], polygon[il], &v_point)) {
+                    if (Tools::lineIntersect(polygon[ii], polygon[ij], polygon[ik], polygon[il], &v_point)) {
                         tmp.clear();
                         tmp = Tools::slipInAngle(polygon[ii], v_point, polygon[ik], h, angle, d1, d2);
 
@@ -132,11 +145,9 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                         q = tmp[1];  //Скользит по [b,c]
                         t = tmp[2];  //Третья вершина
 
-                        //log.push_back(QString::number(Tools::dist(polygon[ij], polygon[ii]) - Tools::dist(polygon[ij], tmp[0])));
-                        //log.push_back(QString::number(Tools::dist(polygon[ii], r)));
                         path.push_back(t);
 
-                        if (Tools::dist(polygon[ii], polygon[ij]) <= Tools::dist(polygon[ii], r)) {
+                        if (polygon[ii].dist(polygon[ij]) <= polygon[ii].dist(r)) {
                             shortEdge = false;
 
                             if (ii == polygon.count() - 3) {
@@ -164,8 +175,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                             tmp.clear();
                             tmp = Tools::slipInAngle(polygon[ii], polygon[ij], polygon[ik], h, angle, d1, d2);
 
-                            while(Tools::dist(polygon[ij], polygon[ii]) < Tools::dist(polygon[ij], tmp[0])) {
-                               qDebug() << Tools::dist(polygon[ij], polygon[ii]) - Tools::dist(polygon[ij], tmp[0]);
+                            while(polygon[ij].dist(polygon[ii]) < polygon[ij].dist(tmp[0])) {
                                elapsed++;
                                angle = M_PI * elapsed / 180.0 * speed;
                                tmp.clear();
@@ -195,7 +205,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                 QVector<Point> tmp = Tools::slipInAngle(polygon[ii], polygon[ij], polygon[ik], h, angle, d1, d2);
 
                 for (int i = 0; i < 3; i++) {
-                    tmp[i].shift(s);
+                    tmp[i] += s;
                 }
 
                 r = tmp[0];  //Скользит по [b,a]
@@ -203,7 +213,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                 t = tmp[2];  //Третья вершина
 
                 //Если достигли вершины ik - переход на следующий угол
-                if (Tools::dist(polygon[ij], polygon[ik]) <= Tools::dist(polygon[ij], q)) {
+                if (polygon[ij].dist(polygon[ik]) <= polygon[ij].dist(q)) {
                     if (ii == polygon.count() - 3) {
                         ii++;
                         ij++;
@@ -242,7 +252,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
                         j = 0;
                     }
 
-                    if (Tools::intersection(polygon[i], polygon[j], path[k - 1], path[k], &res)) {
+                    if (Tools::segmentIntersect(polygon[i], polygon[j], path[k - 1], path[k], &res)) {
                         inter.push_back(res);
                         inter1.push_back(Tools::outPoint(polygon[i], polygon[j], path[k]));
                         break;
@@ -448,68 +458,51 @@ void GLWidget::paintEvent(QPaintEvent *event) {
     }
 
     if (mode == Draw) {
-        //Рисуем полигон
-        if (points.count() > 0) {
-            QPen pointPen = polygonPen;
-            pointPen.setWidth(polygonPen.width() + 3);
-
-            painter.setPen(pointPen);
-            painter.drawPoint(points[0][0] + gX, height - points[0][1] + gY);
-            painter.setPen(polygonPen);
-
-            if (points.count() > 1) {
-                for (int i = 0; i < points.count() - 1; i++) {
-                    painter.drawLine(points[i][0] + gX, height - points[i][1] + gY,
-                                     points[i + 1][0] + gX, height - points[i + 1][1] + gY);
-
-                    painter.setPen(pointPen);
-                    painter.drawPoint(points[i + 1][0] + gX, height - points[i + 1][1] + gY);
-                    painter.setPen(polygonPen);
-                }
-            }
-
-            //Как рисовать последнию линию (в начало или к курсору) — зависит от текщего режима
-            if (mode == Edit) {
-                painter.drawLine(points[0][0] + gX,
-                                 height - points[0][1] + gY,
-                                 points[points.count() - 1][0] + gX,
-                                 height - points[points.count() - 1][1] + gY);
-            } else if (mode == Draw) {
-                if (crossroad) {
-                    painter.setPen(crossroadPen);
-                } else {
-                    painter.setPen(polygonPen);
-                }
-
-                painter.drawLine(points[points.count() - 1][0] + gX,
-                        height - points[points.count() - 1][1] + gY,
-                        cax + gX,
-                        cay + gY);
-            }
-
-            //Нарисовать выделение вокруг активной точки
-            if (activePoint != -1) {
-
-                painter.setPen(circlePen);
-                QVector<int> tmp3 = points.value(activePoint);
-
-                painter.drawEllipse(tmp3.value(0) - active + gX,
-                                    (height - tmp3.value(1)) - active + gY,
-                                    active * 2, active * 2);
-            }
+        while (setOfPolygons.count() <= activePolygon) {
+            setOfPolygons.add(Polygon::Polygon());
         }
+
+        setOfPolygons[activePolygon].addPoint(gPos);
+        gPolygon(setOfPolygons[activePolygon], false);
+
+        if (setOfPolygons[activePolygon].isPolygon() && !setOfPolygons[activePolygon].isConvex()) {
+            QString errorMessage = QString::fromUtf8("Предупреждение: полигон невыпуклый!");
+            painter.setPen(QPen(QColor(255, 64, 64)));
+            painter.drawText(QRect(4, widgetHeight - 20, 400, 20), Qt::AlignLeft, errorMessage);
+        }
+
+        setOfPolygons[activePolygon].removeLast();
+
+        //Выделение вокруг активной точки
+        gActive();
+    }
+
+    if (mode == Edit) {
+        gPolygon(setOfPolygons[activePolygon]);
+
+        if (!setOfPolygons[activePolygon].isConvex()) {
+            QString errorMessage = QString::fromUtf8("Предупреждение: полигон невыпуклый!");
+            painter.setPen(QPen(QColor(255, 64, 64)));
+            painter.drawText(QRect(4, widgetHeight - 20, 400, 20), Qt::AlignLeft, errorMessage);
+        }
+
+        //Выделение вокруг активной точки
+        gActive();
     }
 
     //Вывод блока с информацией
     printInfo();
 
-    painter.setPen(textPen);
-    painter.setFont(textFont);
-
     //Лог
-    if (log.count() > 0) {
+    QPen  logPen  = QPen(Qt::black);
+    QFont logFont = QFont("Courier", 10, 1, false);
+    painter.setPen(logPen);
+    painter.setFont(logFont);
+
+    if (log.count() > 0 && showLog) {
         for (int i = 0; i < log.count(); i++) {
-            painter.drawText(QRect(width / 2 - 200,  2 + 16 * i, 400, 16), Qt::AlignLeft, log[i]);
+            painter.fillRect(QRect(0, 16 * i, 400, 16), QBrush(Qt::white));
+            painter.drawText(QRect(4, 16 * i, 400, 16), Qt::AlignLeft, log[i]);
         }
         log.clear();
     }
@@ -518,11 +511,9 @@ void GLWidget::paintEvent(QPaintEvent *event) {
     if (crossroad) {
         QString errorMessage = "Warning: lines must not intersect!";
         painter.setPen(QPen(QColor(255, 64, 64)));
-        painter.drawText(QRect(4, height - 16, 400, 16), Qt::AlignLeft, errorMessage);
+        painter.drawText(QRect(4, widgetHeight - 16, 400, 16), Qt::AlignLeft, errorMessage);
     }
 
-    painter.save();
-    painter.restore();
     painter.end();
 
     update();
@@ -530,14 +521,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
 
 //Анимация
 void GLWidget::animate() {
-    int limit = 10000; //Лимит кадров
-    elapsed = (elapsed + qobject_cast<QTimer*>(sender())->interval()) % limit;
-
-    /*if (elapsed < 0) {
-        elapsed = 0;
-    }*/
-
-    repaint();
+    elapsed = (elapsed + qobject_cast<QTimer*>(sender())->interval()) % animationSuperior;
 }
 
 void GLWidget::setMode(GLWidget::Modes mode) {
@@ -551,11 +535,6 @@ void GLWidget::setMode(GLWidget::Modes mode) {
     } else if (mode == Edit) {
         this->mode = mode;
         this->move = false;
-        if (isCrossroad()) {
-            crossroad = true;
-        } else {
-            crossroad = false;
-        }
         setCursor(Qt::ArrowCursor);
     } else if (mode == Demo) {
         this->mode = mode;
@@ -591,60 +570,15 @@ void GLWidget::recieveOptions(QPen pen) {
     polygonPen = pen;
 }
 
-//Проверка на пересечение (надо переделать)
-bool GLWidget::isCrossroad() {
-    int x11, y11, x12, y12, x21, y21, x22, y22;
-    for (int i = 0; i < points.count() - 2; i++) {
-        //Первый отрезок
-        x11 = points[i][0];
-        y11 = points[i][1];
-        x12 = points[i + 1][0];
-        y12 = points[i + 1][1];
-
-        for (int j = i + 1; j < points.count(); j++) {
-            //Второй отрезок
-            if (j != points.count() - 1) {
-                x21 = points[j][0];
-                y21 = points[j][1];
-                x22 = points[j + 1][0];
-                y22 = points[j + 1][1];
-            } else {
-                x21 = points[j][0];
-                y21 = points[j][1];
-
-                if (mode == Edit) {
-                    x22 = points[0][0];
-                    y22 = points[0][1];
-                } else {
-                    x22 = cax;
-                    y22 = (height - cay);
-                }
-            }
-
-            //Проверяем пересечения
-            int v1 =(x22-x21)*(y11-y21)-(y22-y21)*(x11-x21);
-            int v2 =(x22-x21)*(y12-y21)-(y22-y21)*(x12-x21);
-            int v3 =(x12-x11)*(y21-y11)-(y12-y11)*(x21-x11);
-            int v4 =(x12-x11)*(y22-y11)-(y12-y11)*(x22-x11);
-
-            if (v1 * v2 < 0 && v3 * v4 < 0) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
 void GLWidget::gLine(Point a, Point b) {
     gLine(a.getX(), a.getY(), b.getX(), b.getY());
 }
 
 void GLWidget::gLine(double a, double b, double c, double d) {
-    painter.drawLine(a * gScale + gX,
-                     height - b * gScale + gY,
-                     c * gScale + gX,
-                     height - d * gScale + gY);
+    painter.drawLine(a * gScale + shiftView.getX(),
+                     widgetHeight - b * gScale + shiftView.getY(),
+                     c * gScale + shiftView.getX(),
+                     widgetHeight - d * gScale + shiftView.getY());
 }
 
 void GLWidget::gVector(Point v) {
@@ -653,14 +587,14 @@ void GLWidget::gVector(Point v) {
 
 void GLWidget::gVector(Point s, Point v) {
     QPolygon p;
-    double arrow_width = 50.0;
+    double arrow_widgetWidth = 50.0;
     double arrow_len = 100.0;
 
-    p << QPoint( 0, -arrow_width );
+    p << QPoint( 0, -arrow_widgetWidth );
     p << QPoint( -arrow_len, 0 );
-    p << QPoint( 0, arrow_width );
+    p << QPoint( 0, arrow_widgetWidth );
 
-    v.shift(s);
+    v += s;
     gLine(s, v);
 }
 
@@ -669,23 +603,48 @@ void GLWidget::gPoint(Point a) {
 }
 
 void GLWidget::gPoint(double a, double b) {
-    painter.drawPoint(a * gScale + gX,
-                      height - b * gScale + gY);
+    painter.drawPoint(a * gScale + shiftView.getX(),
+                      widgetHeight - b * gScale + shiftView.getY());
 }
 
 void GLWidget::gPolygon(Polygon::Polygon p) {
-    //Грани и вершины
-    for (int i = 0; i < p.count(); i++) {
-        int j = i + 1;
-        if (i == p.count() - 1) {
-            j = 0;
+    gPolygon(p, true);
+}
+
+void GLWidget::gPolygon(Polygon::Polygon p, bool close) {
+    QPen pointPen = polygonPen;
+    pointPen.setWidth(pointPen.width() + 5);
+
+    if (p.isPolygon()) {
+        for (int i = 0; i < p.count() - 1; i++) {
+            painter.setPen(polygonPen);
+
+            if (!p.isConvex() && !close && i == p.count() - 2) {
+                painter.setPen(unacceptablePen);
+            }
+
+            gLine(p[i], p[i + 1]);
+
+            painter.setPen(pointPen);
+            gPoint(p[i]);
         }
 
-        painter.setPen(polygonPen);
-        gLine(p[i], p[j]);
+        gPoint(p[p.count() - 1]);
 
-        painter.setPen(QPen(Qt::black, 8, Qt::SolidLine, Qt::RoundCap));
-        gPoint(p[i]);
+        if (close) {
+            painter.setPen(polygonPen);
+            gLine(p[p.count() - 1], p[0]);
+        }
+    } else {
+        painter.setPen(pointPen);
+        for (int i = 0; i < p.count(); i++) {
+            gPoint(p[i]);
+        }
+
+        if (p.count() == 2) {
+            painter.setPen(polygonPen);
+            gLine(p[0], p[1]);
+        }
     }
 }
 
@@ -710,12 +669,12 @@ void GLWidget::gPolygon(Polygon::Polygon p, QString name) {
     double dist = 13.0 / gScale;
 
     for (int i = 0; i < p.count(); i++) {
-        Point c = Tools::polPointText(p, i, dist);
+        Point c = p.pointLabel(i, dist);
         painter.setFont(polygonFont1);
         gText(c, name);
 
         painter.setFont(polygonFont2);
-        c.shift(12 / gScale, -6 / gScale);
+        c += Point(12 / gScale, -6 / gScale);
         gText(c, QString::number(i));
     }
 
@@ -737,11 +696,12 @@ void GLWidget::gPolygon(Polygon::Polygon p, QBrush fill) {
     gPolygon(p);
 }
 
-void GLWidget::gConvexPolygon(QPolygon p) {
+void GLWidget::gPolygon(QPolygon p) {
     QPolygon gp;
 
     for (int i = 0; i < p.count(); i++) {
-        gp << QPoint(p[i].x() * gScale + gX, height - p[i].y() * gScale + gY);
+        gp << QPoint(p[i].x() * gScale + shiftView.getX(),
+                     widgetHeight - p[i].y() * gScale + shiftView.getY());
     }
 
     painter.drawConvexPolygon(gp);
@@ -753,30 +713,42 @@ void GLWidget::gText(Point p, QString text) {
     double w = fontSize * text.length() + 20;
     double h = fontSize + 4;
 
-    QRect rect = QRect(p.getX() * gScale + gX - w / 2,
-                       height - p.getY() * gScale + gY - h / 2,
+    QRect rect = QRect(p.getX() * gScale + shiftView.getX() - w / 2,
+                       widgetHeight - p.getY() * gScale + shiftView.getY() - h / 2,
                        w, h);
 
     //painter.fillRect(rect, QBrush(Qt::cyan));
     painter.drawText(rect, Qt::AlignCenter, text);
 }
 
-void GLWidget::drawGrid() {
-    int startX =  -gX / gScale - 1;
-    int endX   = (-gX + width) / gScale + 1;
-    int startY =   gY / gScale - 1;
-    int endY   =  (gY + height) / gScale + 1;
-    int step   =   50;
+void GLWidget::gActive() {
+    //log.push_back(QString::number(activePoint));
+    if (activePoint != -1) {
+        painter.setPen(activePen);
+        Point tmp = toMPoint(setOfPolygons[activePolygon][activePoint]);
+        painter.drawEllipse(tmp.getX() - activationRadius, tmp.getY() - activationRadius,
+                            activationRadius * 2, activationRadius * 2);
+    }
+}
 
-    while (qFabs(endX - startX) / step > 50) {
+//Нарисовать сетку и оси
+void GLWidget::drawGrid() {
+    int startX =  -shiftView.getX() / gScale - 1;
+    int endX   = (-shiftView.getX() + widgetWidth) / gScale + 1;
+    int startY =   shiftView.getY() / gScale - 1;
+    int endY   =  (shiftView.getY() + widgetHeight) / gScale + 1;
+    double step = 50.0;
+
+    while (qFabs(endX - startX) / step > 30) {
         step *= 2;
     }
-    while (qFabs(endX - startX) / step < 4) {
-        step /= 4;
+    while (qFabs(endX - startX) / step < 5) {
+        step /= 2;
     }
 
     //Сетка
-    painter.setPen(QPen(QColor(225, 225, 225), 1, Qt::SolidLine));
+    painter.setPen(QPen(Qt::gray, 1, Qt::SolidLine));
+
     //Горизонтальные линии
     for (int i = 0; i < endY; i += step) {
         gLine(startX, i, endX, i);
@@ -795,36 +767,37 @@ void GLWidget::drawGrid() {
 
     //Оси
     painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine));
-    gLine(startX, 0, endX, 0);
-    gLine(0, startY, 0, endY);
+    //x
+    painter.drawLine(0, widgetHeight + shiftView.getY(), widgetWidth, widgetHeight + shiftView.getY());
+    //y
+    painter.drawLine(shiftView.getX(), 0, shiftView.getX(), widgetHeight);
 
     //Подписи
-    int axisFontSize = 20;
+    /*int axisFontSize = 20;
     QFont axisFont;
     axisFont.setPixelSize(axisFontSize);
 
     painter.setFont(axisFont);
 
     //Центр координат
-    painter.drawText(QRect(gX - axisFontSize - 4, height + gY,
+    painter.drawText(QRect(shiftView.getX() - axisFontSize - 4, widgetHeight + shiftView.getY(),
                            axisFontSize, axisFontSize + 4), Qt::AlignRight, "O");
 
     //Ось x
-    if (gX < width - axisFontSize) {
-        painter.drawText(QRect(width - axisFontSize - 4, height + gY,
+    if (shiftView.getX() < widgetWidth - axisFontSize) {
+        painter.drawText(QRect(widgetWidth - axisFontSize - 4, widgetHeight + shiftView.getY(),
                                axisFontSize, axisFontSize + 4), Qt::AlignRight, "x");
     } else {
-        painter.drawText(QRect(gX - 4, height + gY,
+        painter.drawText(QRect(shiftView.getX() - 4, widgetHeight + shiftView.getY(),
                                axisFontSize, axisFontSize + 4), Qt::AlignRight, "x");
     }
-        log.push_back(QString::number(gX));
 
     //Ось y
-    if (gY > -height + axisFontSize + 6) {
-        painter.drawText(QRect(gX - axisFontSize - 4, -2, axisFontSize,
+    if (shiftView.getY() > -widgetHeight + axisFontSize + 6) {
+        painter.drawText(QRect(shiftView.getX() - axisFontSize - 4, -2, axisFontSize,
                                axisFontSize + 4), Qt::AlignRight, "y");
     } else {
-        painter.drawText(QRect(gX - axisFontSize - 4, height + gY - axisFontSize - 8,
+        painter.drawText(QRect(shiftView.getX() - axisFontSize - 4, widgetHeight + shiftView.getY() - axisFontSize - 8,
                                axisFontSize, axisFontSize + 4), Qt::AlignRight, "y");
     }
 
@@ -834,18 +807,19 @@ void GLWidget::drawGrid() {
     painter.setPen(QPen(QColor(225, 225, 225), 1, Qt::SolidLine));
 
     gText(Point(step, (-axisFontSize + 4) / gScale), QString::number(step));
-    gText(Point((-axisFontSize + 4) / gScale, step), QString::number(step));
+    gText(Point((-axisFontSize + 4) / gScale, step), QString::number(step));*/
 }
 
 QPoint GLWidget::gQPoint(Point a) {
-    return QPoint(a.getX() * gScale + gX, height - a.getY() * gScale + gY);
+    return QPoint(a.getX() * gScale + shiftView.getX(),
+                  widgetHeight - a.getY() * gScale + shiftView.getY());
 }
 
 void GLWidget::printInfo() {
     int w = 85;
     int h = 16;
     int t = 6;
-    int l = width - w;
+    int l = widgetWidth - w;
 
     QRect rect = QRect(l - 6, 0, w + 6, h * 5 + 8);
     painter.fillRect(rect, QBrush(QColor(255, 255, 255, 200)));
@@ -862,18 +836,25 @@ void GLWidget::printInfo() {
         modeName = "Mode: Edit";
     } else if (mode == Demo) {
         modeName = "Mode: Demo";
+    } else if (mode == Demo2) {
+        modeName = "Mode: Demo2";
+    } else if (mode == Demo3) {
+        modeName = "Mode: Demo3";
     }
+
     painter.drawText(QRect(l, t + h * 0, w, h), Qt::AlignLeft, modeName);
 
     //Выводим координаты
-    QString str_x = "x: " + QString::number((int) (cax * 1.0 / gScale));
-    QString str_y = "y: " + QString::number((int) ((height - cay) * 1.0 / gScale));
+    QString str_x;
+    str_x.sprintf("x: %.2f", gPos.getX());
+    QString str_y;
+    str_y.sprintf("y: %.2f", gPos.getY());
 
     painter.drawText(QRect(l, t + h * 1, w, h), Qt::AlignLeft, str_x);
     painter.drawText(QRect(l, t + h * 2, w, h), Qt::AlignLeft, str_y);
 
     //Вывод масштаба
-    QString str_scale = "Scale: " + QString::number(gScale);
+    QString str_scale = "Scale: " + QString().sprintf("%.1f", gScale * 100) + "%";
     painter.drawText(QRect(l, t + h * 3, w, h), Qt::AlignLeft, str_scale);
 
     //Текущий кадр
@@ -884,206 +865,142 @@ void GLWidget::printInfo() {
 
 //
 void GLWidget::mouseMoveEvent(QMouseEvent *me) {
-    QVector<int> tmp;
+    mPos = me->posF();
 
     if (move) {
-        if (leftBtn || wheel) {
-            gX = me->x() - cbx + ccx;
-            gY = me->y() - cby + ccy;
+        if (wheel) {
+            shiftView = shiftBeforMove + mPos - startMovePos;
         } else {
             setCursor(Qt::OpenHandCursor);
-            cax = me->x() - gX;
-            cay = me->y() - gY;
+            gPos = toGPoint(Point::toPoint(me->pos()));
         }
     } else {
-        tmp = points.value(0);
-        cax = me->x() - gX;
-        cay = me->y() - gY;
+        gPos = toGPoint(Point::toPoint(me->pos()));
 
         if (mode == Draw) {
-            if (points.count() > 2) {
-                if (qPow(tmp.value(0) - cax, 2) +
-                    qPow(tmp.value(1) - (height - cay), 2) < qPow(active, 2)) {
+            if (setOfPolygons[activePolygon].isPolygon()) {
+                if (setOfPolygons[activePolygon][0].dist(gPos) < activationRadius / gScale) {
                     activePoint = 0;
 
-                    cax = tmp.value(0);
-                    cay = height - tmp.value(1);
+                    //Примагничиваем указатель к вершине (фиктивное положение)
+                    gPos = (setOfPolygons[activePolygon][0]);
                 } else {
                     activePoint = -1;
-                }
-
-                //Проверка на пересечение
-                if (isCrossroad() && mode == Draw) {
-                    crossroad = true;
-                    setCursor(Qt::ForbiddenCursor);
-                } else {
-                    crossroad = false;
-                    setCursor(Qt::CrossCursor);
                 }
             }
         } else if (mode == Edit) {
             //Проверить нет ли точек поблизоти курсора и выделить ближайшую точку
-            for (int i = 0; i < points.count(); i++) {
-                QVector<int> tmp = points.value(i);
-
-                if (qPow(tmp.value(0) - cax, 2) +
-                    qPow(tmp.value(1) - (height - cay), 2) < qPow(active, 2)) {
-                    if (activePoint == -1) {
+            if (activePoint == -1) {
+                for (int i = 0; i < setOfPolygons[activePolygon].count(); i++) {
+                    if (setOfPolygons[activePolygon][i].dist(gPos) < activationRadius / gScale) {
                         activePoint = i;
-                    } else if (!leftBtn) {
-                        QVector<int> tmp2 = points.value(activePoint);
-
-                        if (qSqrt(qPow(tmp.value(0) - cax, 2) +
-                            qPow(tmp.value(1) - (height - cay), 2)) <
-                            qSqrt(qPow(tmp2.value(0) - cax, 2) +
-                            qPow(tmp2.value(1) - (height - cay), 2))) {
-                            activePoint = i;
-                        }
-                    }
-
-                    if (!leftBtn) {
                         setCursor(Qt::OpenHandCursor);
+                        break;
                     }
                 }
             }
 
+            //Если зажата левая кнопка - переместить вершину
             if (leftBtn && activePoint != -1) {
-                points[activePoint][0] = cax;
-                points[activePoint][1] = height - cay;
+                setOfPolygons[activePolygon][activePoint] = gPos;
             }
 
             //Если мышь покинула облась активной точки — снимаем выделение
-            if (activePoint != -1 && !leftBtn) {
-                QVector<int> tmp = points.value(activePoint);
-                if (qPow(tmp.value(0) - cax, 2) +
-                    qPow(tmp.value(1) - (height - cay), 2) > qPow(active, 2)) {
-                    activePoint = -1;
-                    setCursor(Qt::ArrowCursor);
-                }
-            }
-
-            //Проверка на пересечения
-            if (isCrossroad()) {
-                crossroad = true;
-                if (leftBtn && activePoint != -1) {
-                    setCursor(Qt::ForbiddenCursor);
-                }
-            } else {
-                crossroad = false;
-                if (leftBtn && activePoint != -1) {
-                    setCursor(Qt::ClosedHandCursor);
-                }
+            if (activePoint != -1 && setOfPolygons[activePolygon][activePoint].dist(gPos) > activationRadius / gScale) {
+                activePoint = -1;
+                setCursor(Qt::ArrowCursor);
             }
         }
     }
-
-    update();
 }
 
-//
+//Нажатие кнопки мыши
 void GLWidget::mousePressEvent(QMouseEvent *me) {
     if(me->button() == Qt::LeftButton) {
         leftBtn = true;
 
-        if (move) {
-            cbx = me->x();
-            cby = me->y();
-            setCursor(Qt::ClosedHandCursor);
-        } else {
-            if (mode == Draw) {
-                if (!crossroad) {
-                    if (activePoint == 0) {
-                        mode = Edit;
-                    } else {
-                        QVector<int> tmp;
-                        tmp.push_back(cax);
-                        tmp.push_back(height - cay);
-                        points.push_back(tmp);
-                    }
-                }
-            } else if (mode == Edit) {
-                if (activePoint != -1) {
-                    setCursor(Qt::ClosedHandCursor);
-                }
+        if (mode == Draw) {
+            setOfPolygons[activePolygon].addPoint(gPos);
+
+            if (!setOfPolygons[activePolygon].isConvex() && setOfPolygons[activePolygon].isPolygon()) {
+                setOfPolygons[activePolygon].removeLast();
+            } else if (activePoint == 0) {
+                setOfPolygons[activePolygon].removeLast();
+                setMode(Edit);
             }
         }
-    } else if (me->button() == Qt::MiddleButton) {
+
+        if (mode == Edit) {
+            if (activePoint != -1) {
+                setCursor(Qt::ClosedHandCursor);
+            }
+        }
+    } else if (me->button() == Qt::MiddleButton && !wheel) {
         wheel = true;
         setMode(Move);
-        if (move) {
-            cbx = me->x();
-            cby = me->y();
+        shiftBeforMove = shiftView;
+        startMovePos = me->posF();
+    } else if(me->button() == Qt::RightButton) {
+        rightBtn = true;
+
+        if (mode == Draw) {
+            if (setOfPolygons[activePolygon].count() > 0) {
+                setOfPolygons[activePolygon].removeLast();
+            }
+
+            if (!setOfPolygons[activePolygon].isPolygon()) {
+                activePoint = -1;
+            }
         }
     }
-
-    update();
 }
 
 //Отжатие кнопки мыши
 void GLWidget::mouseReleaseEvent(QMouseEvent *me) {
     if(leftBtn && me->button() == Qt::LeftButton) {
         leftBtn = false;
+        if (activePoint != -1) {
+            setCursor(Qt::OpenHandCursor);
+        }
     } else if (wheel && me->button() == Qt::MiddleButton) {
         wheel = false;
-
-        if (move) {
-            ccx += me->x() - cbx;
-            ccy += me->y() - cby;
-        }
-
         setMode(Move);
+    } else if (rightBtn && me->button() == Qt::RightButton) {
+        rightBtn = false;
     }
-
-    update();
 }
 
 //Масштабирование
 void GLWidget::wheelEvent(QWheelEvent *me) {
     if (!move) {
-        double oldX = (me->x() - gX) * 1.0 / gScale;
-        double oldY = (height - (me->y() - gY)) * 1.0 / gScale;
+        gScale *= 1 + me->delta() / 1200.0;
 
-        double delta = me->delta();
-        gScale *= 1 + delta / 1200.0;
-
-        if (gScale > 55.0) {
-            gScale = 55.0;
-        } else if (gScale < 0.05) {
-            gScale = 0.05;
+        //Ограничения масштабирования
+        if (gScale > maxScale) {
+            gScale = maxScale;
+        } else if (gScale < minScale) {
+            gScale = minScale;
         } else if (gScale > 0.9 && gScale < 1.1) {
             gScale = 1.0;
         }
 
-        //x
-        double newX = (me->x() - gX) * 1.0 / gScale;
-        if (newX < oldX) {
-            while (newX < oldX) {
-                gX--;
-                newX = (me->x() - gX) * 1.0 / gScale;
-            }
-        } else if (newX > oldX) {
-            while (newX > oldX) {
-                gX++;
-                newX = (me->x() - gX) * 1.0 / gScale;
-            }
-        }
-        ccx = gX;
-
-        //y
-        double newY = (height - (me->y() - gY)) * 1.0 / gScale;
-        if (newY < oldY) {
-            while (newY < oldY) {
-                gY++;
-                newY = (height - (me->y() - gY)) * 1.0 / gScale;
-            }
-        } else if (newY > oldY) {
-            while (newY > oldY) {
-                gY--;
-                newY = (height - (me->y() - gY)) * 1.0 / gScale;
-            }
-        }
-        ccy = gY;
-
-        update();
+        //Вычисляем сдвиг
+        shiftView = Point((gPos.getX() * gScale - me->x()) * -1,
+                           gPos.getY() * gScale - widgetHeight + me->y());
+        gPos = toGPoint(Point::toPoint(me->pos()));
     }
+}
+
+Point GLWidget::toMPoint(Point p) {
+    return Point(p.getX() * gScale + shiftView.getX(),
+                -p.getY() * gScale + shiftView.getY() + widgetHeight);
+}
+
+Point GLWidget::toGPoint(Point p) {
+    return Point((p.getX() - shiftView.getX()) / gScale,
+                 (widgetHeight - p.getY() + shiftView.getY()) / gScale);
+}
+
+Point GLWidget::toGPoint(QPoint p) {
+    toGPoint(Point::toPoint(p));
 }

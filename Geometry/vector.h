@@ -13,6 +13,7 @@ private:
 public:
     Vector();
     Vector(double x, double y);
+    Vector(Point p);
     Vector(Point p1, Point p2);
 
     double getX();
@@ -27,6 +28,7 @@ public:
     static Vector normal(Point p1, Point p2);
     static double cos(Vector v1, Vector v2);
     double cos(Vector v);
+    double angle(Vector v);
 };
 
 #endif // VECTOR_H

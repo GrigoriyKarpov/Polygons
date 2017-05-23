@@ -7,8 +7,7 @@
 #include <QComboBox>
 #include <QPen>
 
-class Dialog : public QDialog
-{
+class Dialog : public QDialog {
     Q_OBJECT
 
 signals:
