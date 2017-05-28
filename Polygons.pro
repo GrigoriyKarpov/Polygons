@@ -22,3 +22,6 @@ SOURCES   += main.cpp \
     Geometry/setofpolygons.cpp
 
 RESOURCES += Resources/Icons/Icons.qrc
+
+FORMS += \
+    mainwindow.ui

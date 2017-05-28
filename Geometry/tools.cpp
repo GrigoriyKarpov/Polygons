@@ -280,6 +280,109 @@ Polygon Tools::outCharArea(Polygon p1, Polygon p2, int o) {
     return result;
 }
 
+Polygon Tools::inCharArea(Polygon p1, Polygon p2, int o) {
+
+    QVector<Vector> n;
+    QVector<Vector> m;
+
+    //Внутр
+    for (int i = 0; i < p1.count(); i++) {
+        int j = i + 1;
+        if (i == p1.count() - 1) {
+            j = 0;
+        }
+        n.push_back(Vector::normal(p1[j], p1[i]));
+    }
+
+    //Внешние нормали
+    for (int i = 0; i < p2.count(); i++) {
+        int j = i + 1;
+        if (i == p2.count() - 1) {
+            j = 0;
+        }
+
+        m.push_back(Vector::normal(p2[i], p2[j]));
+    }
+    QVector<Point> charPoints;
+
+    for (int i = 0; i < n.count(); i++) {
+        int j = i + 1;
+        if (i == n.count() - 1) {
+            j = 0;
+        }
+
+        for (int k = 0; k < p2.count(); k++) {
+            int t = k + 1;
+            if (k == p2.count() - 1) {
+                t = 0;
+            }
+            int l = k - 1;
+            if (k == 0) {
+                l = p2.count() - 1;
+            }
+
+            //Находим углы
+            double a1 = n[i].cos(Vector(p2[k], p2[t]));
+            double a2 = n[i].cos(Vector(p2[k], p2[l]));
+
+            //Находим вершину, которая может скользить
+            if (a1 >= 0 && a2 >= 0) {
+                Point v1 = p1[i];
+                v1 = Vector(p2[k], p2[o]).translate(v1);
+                Point v2 = p1[j];
+                v2 = Vector(p2[k], p2[o]).translate(v2);
+
+                charPoints.push_back(v1);
+                charPoints.push_back(v2);
+
+                break;
+            }
+        }
+    }
+
+    Polygon::Polygon inter;
+
+    for (int i = 0; i < charPoints.count(); i += 2) {
+        int j = i + 1;
+        int k = i + 2;
+        int t = i + 3;
+
+        if (i == charPoints.count() - 1) {
+            j = 0;
+            k = 1;
+            t = 2;
+        }
+        if (i == charPoints.count() - 2) {
+            k = 0;
+            t = 1;
+        }
+        if (i == charPoints.count() - 3) {
+            t = 0;
+        }
+
+        Point res;
+
+        if (Tools::segmentIntersect(charPoints[i], charPoints[j],
+                                    charPoints[k], charPoints[t], &res)) {
+            inter.addPoint(res);
+        }
+
+        int m = t + 1;
+        if (t == charPoints.count() - 1) {
+            m = 0;
+        }
+        if (charPoints[t] == charPoints[m]) {
+            inter.addPoint(charPoints[t]);
+        }
+    }
+
+    return inter;
+}
+
+Point Tools::center(Point a, Point b) {
+    return Point(a.getX() + (b.getX() - a.getX()) / 2.0, a.getY() + (b.getY() - a.getY()) / 2.0);
+}
+
 //Косинус угла abc
 double Tools::cos(Point a, Point b, Point c) {
     Vector v1 = Vector(b, a);

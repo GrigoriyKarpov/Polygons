@@ -12,89 +12,167 @@ Window::Window() : QWidget() {
 
     widgetOpenGL = new GLWidget(this);
 
-    drawBtn = new QPushButton(QString::fromUtf8("Рисование"));
-    drawBtn->setCheckable(true);
-    editBtn = new QPushButton(QString::fromUtf8("Редактирование"));
-    editBtn->setCheckable(true);
-    demoBtn = new QPushButton(QString::fromUtf8("Демонстрация"));
-    demoBtn->setCheckable(true);
-    //moveBtn = new QPushButton("Move");
-    //moveBtn->setCheckable(true);
-    saveBtn = new QPushButton(QString::fromUtf8("Сохранить"));
-    optionBtn = new QPushButton(QString::fromUtf8("Опции"));
-    optionBtn->setCheckable(true);
+    listOfPolygons = new QListWidget(this);
+    listOfPolygons->setMinimumWidth(200);
 
-    btnsLayout = new QHBoxLayout;
-    btnsLayout->addWidget(drawBtn);
-    btnsLayout->addWidget(editBtn);
-    btnsLayout->addWidget(demoBtn);
-    //btnsLayout->addWidget(moveBtn);
-    btnsLayout->addStretch();
-    btnsLayout->addWidget(saveBtn);
-    btnsLayout->addWidget(optionBtn);
+    lblList = new QLabel(QString::fromUtf8("Многоугольники:"));
+    lblMode = new QLabel(QString::fromUtf8("Режимы:"));
+
+    addBtn = new QPushButton(QString::fromUtf8("Добавить"));
+    editBtn = new QPushButton(QString::fromUtf8("Изменить"));
+    editBtn->setCheckable(true);
+    removeBtn = new QPushButton(QString::fromUtf8("Удалить"));
+    editBtn->setEnabled(false);
+    removeBtn->setEnabled(false);
+
+    viewBtn = new QPushButton(QString::fromUtf8("Обзор"));
+    viewBtn->setCheckable(true);
+    inCharBtn = new QPushButton(QString::fromUtf8("Внутренняя характеристическая область"));
+    inCharBtn->setCheckable(true);
+    outCharBtn = new QPushButton(QString::fromUtf8("Внешняя характеристическая область"));
+    outCharBtn->setCheckable(true);
+
+    editBtnCheck = false;
+
+    polygonBtnsLayout = new QHBoxLayout;
+    polygonBtnsLayout->addWidget(addBtn);
+    polygonBtnsLayout->addWidget(editBtn);
+    polygonBtnsLayout->addWidget(removeBtn);
+
+    demoBtnsLayout = new QVBoxLayout;
+    demoBtnsLayout->addWidget(viewBtn);
+    demoBtnsLayout->addWidget(inCharBtn);
+    demoBtnsLayout->addWidget(outCharBtn);
+
+    optionsLayout = new QVBoxLayout;
+    optionsLayout->addWidget(lblList);
+    optionsLayout->addWidget(listOfPolygons);
+    optionsLayout->addLayout(polygonBtnsLayout);
+    optionsLayout->addLayout(demoBtnsLayout);
+    optionsLayout->addStretch();
+
+    widgetsLayout = new QHBoxLayout;
+    widgetsLayout->addWidget(widgetOpenGL);
+    widgetsLayout->addLayout(optionsLayout);
 
     mainlayout = new QVBoxLayout;
-    mainlayout->addLayout(btnsLayout);
-    mainlayout->addWidget(widgetOpenGL);
+    mainlayout->addLayout(widgetsLayout);
 
     setLayout(mainlayout);
 
-    dialog = new Dialog();
-
-    //Реализация передачи данных между окном опций и виджетом OpenGL
-    connect(optionBtn, SIGNAL(clicked()), this, SLOT(optionBtnClick()));
-    connect(this, SIGNAL(sendOptions(QPen)), dialog, SLOT(recieveOptions(QPen)));
-    connect(dialog, SIGNAL(sendOptions(QPen)), widgetOpenGL, SLOT(recieveOptions(QPen)));
-
-    //Переключение режимов
-    connect(drawBtn, SIGNAL(clicked()), this, SLOT(drawBtnClick()));
+    connect(viewBtn, SIGNAL(clicked()), this, SLOT(viewBtnClick()));
+    connect(addBtn, SIGNAL(clicked()), this, SLOT(addBtnClick()));
     connect(editBtn, SIGNAL(clicked()), this, SLOT(editBtnClick()));
-    //connect(moveBtn, SIGNAL(clicked()), this, SLOT(moveBtnClick()));
-    connect(demoBtn, SIGNAL(clicked()), this, SLOT(demoBtnClick()));
-
-    //
-    connect(saveBtn, SIGNAL(clicked()), this, SLOT(saveBtnClick()));
-
+    connect(removeBtn, SIGNAL(clicked()), this, SLOT(removeBtnClick()));
+    connect(widgetOpenGL, SIGNAL(endDraw()), this, SLOT(endDraw()));
+    connect(inCharBtn, SIGNAL(clicked()), this, SLOT(inCharBtnClick()));
+    connect(outCharBtn, SIGNAL(clicked()), this, SLOT(outCharBtnClick()));
 
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), widgetOpenGL, SLOT(animate()));
     timer->start(1);
 }
 
-void Window::optionBtnClick() {
-    dialog->show();
-    emit sendOptions(widgetOpenGL->getPolygonPen());
+void Window::endDraw() {
+    if (listOfPolygons->count() < 2) {
+        addBtn->setEnabled(true);
+        editBtn->setEnabled(true);
+        removeBtn->setEnabled(true);
+    } else {
+        editBtn->setEnabled(true);
+        removeBtn->setEnabled(true);
+    }
 }
 
+void Window::addBtnClick() {
+    addBtn->setEnabled(false);
+    editBtn->setEnabled(false);
+    removeBtn->setEnabled(false);
 
-void Window::drawBtnClick() {
-    widgetOpenGL->setMode(GLWidget::Draw);
-    editBtn->setChecked(false);
-    //moveBtn->setChecked(false);
-    demoBtn->setChecked(false);
+    inCharBtn->setChecked(false);
+    outCharBtn->setChecked(false);
+    viewBtn->setChecked(false);
+
+    QChar name;
+    if (listOfPolygons->count() > 0 && QChar(listOfPolygons->item(0)->text()[0]) > QChar('A')) {
+        name = QChar('A');
+    } else {
+        name = QChar('A' + listOfPolygons->count());
+    }
+    new QListWidgetItem(name, listOfPolygons);
+    widgetOpenGL->addPolygon(name);
 }
 
 void Window::editBtnClick() {
-    widgetOpenGL->setMode(GLWidget::Edit);
-    drawBtn->setChecked(false);
-    //moveBtn->setChecked(false);
-    demoBtn->setChecked(false);
+    if (editBtnCheck) {
+        if (widgetOpenGL->activePolygonIsConvex()) {
+            widgetOpenGL->endEdit();
+            if (listOfPolygons->count() < 2) {
+                addBtn->setEnabled(true);
+            }
+            removeBtn->setEnabled(true);
+            editBtnCheck = false;
+            editBtn->setChecked(false);
+        } else {
+            editBtn->setChecked(true);
+        }
+    } else {
+        if (listOfPolygons->currentRow() != -1) {
+            widgetOpenGL->editPolygon(listOfPolygons->currentRow());
+            addBtn->setEnabled(false);
+            removeBtn->setEnabled(false);
+
+            inCharBtn->setChecked(false);
+            outCharBtn->setChecked(false);
+            viewBtn->setChecked(false);
+            editBtnCheck = true;
+            editBtn->setChecked(true);
+        } else {
+            editBtn->setChecked(false);
+        }
+    }
 }
 
-void Window::saveBtnClick() {
+void Window::removeBtnClick() {
+    widgetOpenGL->removePolygon(listOfPolygons->currentRow());
+    widgetOpenGL->setMode(GLWidget::View);
+
+    inCharBtn->setChecked(false);
+    outCharBtn->setChecked(false);
+    viewBtn->setChecked(false);
+
+    QListWidgetItem *it = listOfPolygons->item(listOfPolygons->currentRow());
+    delete it;
+
+    if (listOfPolygons->count() < 2) {
+        addBtn->setEnabled(true);
+        editBtn->setEnabled(true);
+        removeBtn->setEnabled(true);
+    } else {
+        editBtn->setEnabled(true);
+        removeBtn->setEnabled(true);
+    }
 }
 
-//void Window::moveBtnClick()
-//{
-//    widgetOpenGL->setMode(GLWidget::Move);
-//}
+void Window::viewBtnClick() {
+    viewBtn->setChecked(true);
+    outCharBtn->setChecked(false);
+    inCharBtn->setChecked(false);
+    widgetOpenGL->setMode(GLWidget::View);
+}
 
-void Window::demoBtnClick()
-{
-    widgetOpenGL->setMode(GLWidget::Demo);
-    drawBtn->setChecked(false);
-    editBtn->setChecked(false);
-    //moveBtn->setChecked(false);
+void Window::inCharBtnClick() {
+    inCharBtn->setChecked(true);
+    outCharBtn->setChecked(false);
+    viewBtn->setChecked(false);
+    widgetOpenGL->setMode(GLWidget::Demo4);
+}
+
+void Window::outCharBtnClick() {
+    outCharBtn->setChecked(true);
+    inCharBtn->setChecked(false);
+    viewBtn->setChecked(false);
+    widgetOpenGL->setMode(GLWidget::Demo3);
 }
 
 void Window::moveToCenter() {

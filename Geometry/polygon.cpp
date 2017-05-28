@@ -29,6 +29,10 @@ void Polygon::removeLast() {
     points.remove(points.count() - 1);
 }
 
+void Polygon::remove(int i) {
+    points.remove(i);
+}
+
 QString Polygon::toString() {
     QString result;
 

@@ -17,6 +17,13 @@ void SetOfPolygons::clear() {
     brushes.clear();
 }
 
+void SetOfPolygons::remove(int i) {
+    set.remove(i);
+    names.remove(i);
+    pens.remove(i);
+    brushes.remove(i);
+}
+
 void SetOfPolygons::add(Polygon p, QString name, QPen pen, QBrush brush) {
     set.push_back(p);
     names.push_back(name);
@@ -42,6 +49,14 @@ void SetOfPolygons::add(Polygon p, QPen pen) {
 
 void SetOfPolygons::add(Polygon p, QPen pen, QBrush brush) {
     add(p, "", pen, brush);
+}
+
+QString SetOfPolygons::getName(int i) {
+    return names[i];
+}
+
+QPen SetOfPolygons::getPen(int i){
+    return pens[i];
 }
 
 int SetOfPolygons::count() {

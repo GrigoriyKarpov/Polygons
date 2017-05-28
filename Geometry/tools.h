@@ -18,6 +18,8 @@ public:
     static bool lineIntersect(Point a, Point b, Point c, Point d, Point *p);
     static bool segmentIntersect(Point a, Point b, Point c, Point d, Point *p);
     static Polygon outCharArea(Polygon p1, Polygon p2, int o);
+    static Polygon inCharArea(Polygon p1, Polygon p2, int o);
+    static Point center(Point a, Point b);
 };
 
 #endif // TOOLS_H

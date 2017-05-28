@@ -110,6 +110,10 @@ Point &Point::operator=(const QPointF &p) {
     return *this;
 }
 
+bool Point::operator==(Point p) {
+    return x == p.x && y == p.y;
+}
+
 Point Point::toPoint(const QPointF &p) {
     return Point(p.x(), p.y());
 }

@@ -21,12 +21,17 @@ public:
 
     void clear();
 
+    void remove(int i);
+
     void add(Polygon p);
     void add(Polygon p, QString name);
     void add(Polygon p, QString name, QPen pen);
     void add(Polygon p, QString name, QPen pen, QBrush brush);
     void add(Polygon p, QPen pen);
     void add(Polygon p, QPen pen, QBrush brush);
+
+    QString getName(int i);
+    QPen getPen(int i);
 
     int count();
 

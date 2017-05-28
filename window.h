@@ -9,6 +9,8 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPen>
+#include <QListWidget>
+#include <QLabel>
 
 class Window : public QWidget
 {
@@ -23,25 +25,36 @@ signals:
     void selectMode(GLWidget::Modes mode);
 
 public slots:
-    void optionBtnClick();
-    void drawBtnClick();
+    void endDraw();
+
+    void addBtnClick();
     void editBtnClick();
-    void saveBtnClick();
-    //void moveBtnClick();
-    void demoBtnClick();
+    void removeBtnClick();
+    void viewBtnClick();
+    void inCharBtnClick();
+    void outCharBtnClick();
 
 private:
     Dialog *dialog;
     GLWidget *widgetOpenGL;
+    QListWidget *listOfPolygons;
 
-    QPushButton *drawBtn;
+    QLabel *lblList;
+    QLabel *lblMode;
+
+    QPushButton *addBtn;
     QPushButton *editBtn;
-    QPushButton *saveBtn;
-    QPushButton *optionBtn;
-    //QPushButton *moveBtn;
-    QPushButton *demoBtn;
+    QPushButton *removeBtn;
+    QPushButton *viewBtn;
+    QPushButton *inCharBtn;
+    QPushButton *outCharBtn;
 
-    QHBoxLayout *btnsLayout;
+    bool editBtnCheck;
+
+    QHBoxLayout *polygonBtnsLayout;
+    QHBoxLayout *widgetsLayout;
+    QVBoxLayout *demoBtnsLayout;
+    QVBoxLayout *optionsLayout;
     QVBoxLayout *mainlayout;
 };
 

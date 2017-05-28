@@ -16,13 +16,21 @@ class GLWidget : public QGLWidget
 
 public:
     GLWidget(QWidget *parent);
-    enum Modes {Draw, Edit, Demo, Move, Demo2, Demo3};
+    enum Modes {View, Draw, Edit, Demo, Move, Demo2, Demo3, Demo4};
     QPen getPolygonPen();
     void setMode(GLWidget::Modes mode);
+    void addPolygon(QString name);
+    void removePolygon(int i);
+    void editPolygon(int i);
+    void endEdit();
+    bool activePolygonIsConvex();
 
 public slots:
     void recieveOptions(QPen pen);
     void animate();
+
+signals:
+    void endDraw();
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -89,6 +97,7 @@ private:
     QPen textPen;
     QPen polygonPen;
     QPen unacceptablePen;
+    QPen inactivePen;
     QPen activePen;
     QPen crossroadPen;
 
@@ -124,17 +133,19 @@ private:
     void gLine(double a, double b, double c, double d);
 
     void gVector(Point v);
+    void gVector(Vector v);
     void gVector(Point s, Point v);
+    void gVector(Point s, Vector v);
 
     void gPolygon(Polygon::Polygon p);
     void gPolygon(Polygon::Polygon p, bool close);
     void gPolygon(Polygon::Polygon p, QString name);
     void gPolygon(Polygon::Polygon p, QBrush fill);
-    //void gPolygon(QVector<Point> polygon, QPen pen);
+    void gPolygon(Polygon::Polygon p, QPen pen, QBrush fill);
     //void gPolygon(QVector<Point> polygon, QPen, QBrush fill);
     //void gPolygon(QVector<Point> polygon, QString name, QBrush fill);
     //void gPolygon(QVector<Point> polygon, QString name, QPen pen);
-    //void gPolygon(QVector<Point> polygon, QString name, QPen pen, QBrush fill);
+    void gPolygon(Polygon::Polygon p, bool close, QString name, QPen pen);
 
     void gPolygon(QPolygon p);
 

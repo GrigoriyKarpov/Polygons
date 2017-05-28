@@ -20,7 +20,7 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
     setFixedSize(widgetWidth, widgetHeight);
     setMouseTracking(true);
 
-    activePolygon = 0;
+    activePolygon = -1;
     setOfPolygons = SetOfPolygons();
 
     //Инициализация переменных
@@ -43,7 +43,7 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
     activationRadius  = 10;
     activePoint = -1;
 
-    animationSuperior = 100;
+    animationSuperior = 10000;
 
     inter_f = true;
     slip = false;
@@ -56,11 +56,12 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
 
     wheel = false;
     shortEdge = false;
-    setMode(Draw);
+    setMode(View);
 
     textPen = QPen(QColor(96, 96, 96));
     textFont.setPixelSize(12);
     polygonPen = QPen(Qt::black, 3, Qt::SolidLine, Qt::RoundCap);
+    inactivePen = QPen(Qt::gray, 3, Qt::SolidLine, Qt::RoundCap);
     unacceptablePen = QPen(Qt::red, 3, Qt::DotLine, Qt::RoundCap);
     activePen = QPen(Qt::red, 2, Qt::SolidLine, Qt::RoundCap);
     crossroadPen = QPen(Qt::red, 2, Qt::DotLine, Qt::RoundCap);
@@ -434,7 +435,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
 
     //Внешнаяя характеристическая область
     if (mode == Demo3) {
-        QVector<Point> polygon1;
+        /*QVector<Point> polygon1;
         polygon1.push_back(Point(0.0, -250.0));
         polygon1.push_back(Point(-350.0, -150.0));
         polygon1.push_back(Point(-150.0, 130.0));
@@ -454,12 +455,63 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         gPolygon(polygon1, "A");
         gPolygon(polygon2, "B");
 
-        gPolygon(outCharArea, QBrush(QColor(255, 90, 90, 255), Qt::BDiagPattern));
+        gPolygon(outCharArea, QBrush(QColor(255, 90, 90, 255), Qt::BDiagPattern));*/
+
+        if (setOfPolygons.count() == 2) {
+            gPolygon(setOfPolygons[0], setOfPolygons.getName(0));
+            gPolygon(setOfPolygons[1], setOfPolygons.getName(1));
+
+            Polygon::Polygon outCharArea = Tools::outCharArea(setOfPolygons[0], setOfPolygons[1], 0);
+            gPolygon(outCharArea, QPen(QColor(255, 90, 90, 255), 2, Qt::SolidLine, Qt::RoundCap),
+                     QBrush(QColor(255, 90, 90, 255), Qt::BDiagPattern));
+        }
+    }
+
+    //Внутренняя характеристическая область
+    if (mode == Demo4) {
+        /*Polygon::Polygon p1 = Polygon::Polygon();
+        p1.addPoint(Point(0.0, -250.0));
+        p1.addPoint(Point(-350.0, -150.0));
+        p1.addPoint(Point(-150.0, 130.0));
+        p1.addPoint(Point(-70.0, 130.0));
+        p1.addPoint(Point(-40.0, 80.0));
+
+        Polygon::Polygon p2 = Polygon::Polygon();
+        p2.addPoint(Point(250.0, -40.0));
+        p2.addPoint(Point(140.0, -50.0));
+        p2.addPoint(Point(150.0, 70.0));
+        p2.addPoint(Point(230.0, 80.0));
+        p2.addPoint(Point(260.0, 10.0));
+
+        //Визуализация
+        gPolygon(p1, "A");
+        gPolygon(p2, "B");
+
+        //Построение внутренней характеристической области
+        Polygon::Polygon outCharArea = Tools::inCharArea(p1, p2, 0);
+
+        gPolygon(outCharArea, QBrush(QColor(255, 90, 90, 255), Qt::BDiagPattern));*/
+        if (setOfPolygons.count() == 2) {
+            gPolygon(setOfPolygons[0], setOfPolygons.getName(0));
+            gPolygon(setOfPolygons[1], setOfPolygons.getName(1));
+
+            Polygon::Polygon inCharArea = Tools::inCharArea(setOfPolygons[0], setOfPolygons[1], 0);
+            gPolygon(inCharArea, QPen(QColor(90, 90, 255, 255), 2, Qt::SolidLine, Qt::RoundCap),
+                     QBrush(QColor(90, 90, 255, 255), Qt::BDiagPattern));
+        }
+    }
+
+    if (mode == View) {
+        for (int i = 0; i < setOfPolygons.count(); i++) {
+            gPolygon(setOfPolygons[i], setOfPolygons.getName(i));
+        }
     }
 
     if (mode == Draw) {
-        while (setOfPolygons.count() <= activePolygon) {
-            setOfPolygons.add(Polygon::Polygon());
+        for (int i = 0; i < setOfPolygons.count(); i++) {
+            if (i != activePolygon) {
+                gPolygon(setOfPolygons[i], true, "", inactivePen);
+            }
         }
 
         setOfPolygons[activePolygon].addPoint(gPos);
@@ -478,7 +530,13 @@ void GLWidget::paintEvent(QPaintEvent *event) {
     }
 
     if (mode == Edit) {
-        gPolygon(setOfPolygons[activePolygon]);
+        for (int i = 0; i < setOfPolygons.count(); i++) {
+            if (i == activePolygon) {
+                gPolygon(setOfPolygons[i], true, "", setOfPolygons.getPen(i));
+            } else {
+                gPolygon(setOfPolygons[i], true, "", inactivePen);
+            }
+        }
 
         if (!setOfPolygons[activePolygon].isConvex()) {
             QString errorMessage = QString::fromUtf8("Предупреждение: полигон невыпуклый!");
@@ -525,20 +583,19 @@ void GLWidget::animate() {
 }
 
 void GLWidget::setMode(GLWidget::Modes mode) {
-    if (mode == Draw) {
+    if (mode == View) {
+        this->mode = View;
+        this->move = false;
+        setCursor(Qt::ArrowCursor);
+    } else if (mode == Draw) {
         this->mode = mode;
         this->move = false;
         crossroad = false;
         activePoint = -1;
-        points.clear();
         setCursor(Qt::CrossCursor);
-    } else if (mode == Edit) {
+    } else if (mode == Edit  || mode == Demo || mode == Demo2 ||
+               mode == Demo3 || mode == Demo4) {
         this->mode = mode;
-        this->move = false;
-        setCursor(Qt::ArrowCursor);
-    } else if (mode == Demo) {
-        this->mode = mode;
-        points.clear();
         this->move = false;
         setCursor(Qt::ArrowCursor);
     } else if (mode == Move) {
@@ -560,6 +617,30 @@ void GLWidget::setMode(GLWidget::Modes mode) {
             }
         }
     }
+}
+
+void GLWidget::addPolygon(QString name) {
+    activePolygon = setOfPolygons.count();
+    setOfPolygons.add(Polygon::Polygon(), name);
+    setMode(Draw);
+}
+
+void GLWidget::removePolygon(int i) {
+    setOfPolygons.remove(i);
+}
+
+void GLWidget::editPolygon(int i) {
+    activePolygon = i;
+    setMode(Edit);
+}
+
+void GLWidget::endEdit() {
+    activePolygon = -1;
+    setMode(View);
+}
+
+bool GLWidget::activePolygonIsConvex() {
+    return setOfPolygons[activePolygon].isConvex();
 }
 
 QPen GLWidget::getPolygonPen() {
@@ -585,6 +666,10 @@ void GLWidget::gVector(Point v) {
     gVector(Point(), v);
 }
 
+void GLWidget::gVector(Vector v) {
+    gVector(Point(), Point(v.getX(), v.getY()));
+}
+
 void GLWidget::gVector(Point s, Point v) {
     QPolygon p;
     double arrow_widgetWidth = 50.0;
@@ -598,6 +683,10 @@ void GLWidget::gVector(Point s, Point v) {
     gLine(s, v);
 }
 
+void GLWidget::gVector(Point s, Vector v) {
+    gVector(s, Point(v.getX(), v.getY()));
+}
+
 void GLWidget::gPoint(Point a) {
     gPoint(a.getX(), a.getY());
 }
@@ -608,16 +697,42 @@ void GLWidget::gPoint(double a, double b) {
 }
 
 void GLWidget::gPolygon(Polygon::Polygon p) {
-    gPolygon(p, true);
+    gPolygon(p, true, "", polygonPen);
 }
 
 void GLWidget::gPolygon(Polygon::Polygon p, bool close) {
-    QPen pointPen = polygonPen;
+    gPolygon(p, close, "", polygonPen);
+}
+
+void GLWidget::gPolygon(Polygon::Polygon p, QString name) {
+    gPolygon(p, true, name, polygonPen);
+}
+
+void GLWidget::gPolygon(Polygon::Polygon p, QBrush fill) {
+    gPolygon(p, polygonPen, fill);
+}
+
+void GLWidget::gPolygon(Polygon::Polygon p, QPen pen, QBrush fill) {
+    QPolygon area;
+
+    for (int i = 0; i < p.count(); i++) {
+        area << gQPoint(p[i]);
+    }
+
+    QPainterPath areaPath;
+    areaPath.addPolygon(area);
+    painter.fillPath(areaPath, fill);
+
+    gPolygon(p, true, "", pen);
+}
+
+void GLWidget::gPolygon(Polygon::Polygon p, bool close, QString name, QPen pen) {
+    QPen pointPen = pen;
     pointPen.setWidth(pointPen.width() + 5);
 
     if (p.isPolygon()) {
         for (int i = 0; i < p.count() - 1; i++) {
-            painter.setPen(polygonPen);
+            painter.setPen(pen);
 
             if (!p.isConvex() && !close && i == p.count() - 2) {
                 painter.setPen(unacceptablePen);
@@ -632,7 +747,7 @@ void GLWidget::gPolygon(Polygon::Polygon p, bool close) {
         gPoint(p[p.count() - 1]);
 
         if (close) {
-            painter.setPen(polygonPen);
+            painter.setPen(pen);
             gLine(p[p.count() - 1], p[0]);
         }
     } else {
@@ -642,58 +757,42 @@ void GLWidget::gPolygon(Polygon::Polygon p, bool close) {
         }
 
         if (p.count() == 2) {
-            painter.setPen(polygonPen);
+            painter.setPen(pen);
             gLine(p[0], p[1]);
         }
     }
-}
-
-void GLWidget::gPolygon(Polygon::Polygon p, QString name) {
-    gPolygon(p);
 
     //Подписи
-    QPen textPolygonPen = QPen();
-    textPolygonPen.setWidth(5);
+    if (name.length() > 0) {
+        QPen textPolygonPen = QPen();
+        textPolygonPen.setWidth(5);
 
-    QFont polygonFont1;
-    polygonFont1.setPixelSize(18);
+        QFont polygonFont1;
+        polygonFont1.setPixelSize(18);
 
-    QFont polygonFont2;
-    polygonFont2.setPixelSize(15);
+        QFont polygonFont2;
+        polygonFont2.setPixelSize(15);
 
-    QFont polygonFont3;
-    polygonFont3.setPixelSize(22);
+        QFont polygonFont3;
+        polygonFont3.setPixelSize(22);
 
-    painter.setPen(textPolygonPen);
+        painter.setPen(textPolygonPen);
 
-    double dist = 13.0 / gScale;
+        double dist = 13.0 / gScale;
 
-    for (int i = 0; i < p.count(); i++) {
-        Point c = p.pointLabel(i, dist);
-        painter.setFont(polygonFont1);
-        gText(c, name);
+        for (int i = 0; i < p.count(); i++) {
+            Point c = p.pointLabel(i, dist);
+            painter.setFont(polygonFont1);
+            gText(c, name);
 
-        painter.setFont(polygonFont2);
-        c += Point(12 / gScale, -6 / gScale);
-        gText(c, QString::number(i));
+            painter.setFont(polygonFont2);
+            c += Point(12 / gScale, -6 / gScale);
+            gText(c, QString::number(i));
+        }
+
+        painter.setFont(polygonFont3);
+        gText(p.center(), name);
     }
-
-    painter.setFont(polygonFont3);
-    gText(p.center(), name);
-}
-
-void GLWidget::gPolygon(Polygon::Polygon p, QBrush fill) {
-    QPolygon area;
-
-    for (int i = 0; i < p.count(); i++) {
-        area << gQPoint(p[i]);
-    }
-
-    QPainterPath areaPath;
-    areaPath.addPolygon(area);
-    painter.fillPath(areaPath, fill);
-
-    gPolygon(p);
 }
 
 void GLWidget::gPolygon(QPolygon p) {
@@ -747,7 +846,7 @@ void GLWidget::drawGrid() {
     }
 
     //Сетка
-    painter.setPen(QPen(Qt::gray, 1, Qt::SolidLine));
+    painter.setPen(QPen(QColor(215, 215, 215, 255), 1, Qt::SolidLine));
 
     //Горизонтальные линии
     for (int i = 0; i < endY; i += step) {
@@ -773,7 +872,7 @@ void GLWidget::drawGrid() {
     painter.drawLine(shiftView.getX(), 0, shiftView.getX(), widgetHeight);
 
     //Подписи
-    /*int axisFontSize = 20;
+    int axisFontSize = 20;
     QFont axisFont;
     axisFont.setPixelSize(axisFontSize);
 
@@ -807,7 +906,7 @@ void GLWidget::drawGrid() {
     painter.setPen(QPen(QColor(225, 225, 225), 1, Qt::SolidLine));
 
     gText(Point(step, (-axisFontSize + 4) / gScale), QString::number(step));
-    gText(Point((-axisFontSize + 4) / gScale, step), QString::number(step));*/
+    gText(Point((-axisFontSize + 4) / gScale, step), QString::number(step));
 }
 
 QPoint GLWidget::gQPoint(Point a) {
@@ -816,12 +915,12 @@ QPoint GLWidget::gQPoint(Point a) {
 }
 
 void GLWidget::printInfo() {
-    int w = 85;
+    int w = 95;
     int h = 16;
     int t = 6;
     int l = widgetWidth - w;
 
-    QRect rect = QRect(l - 6, 0, w + 6, h * 5 + 8);
+    QRect rect = QRect(l - 6, 0, w + 6, h * 4 + 8);
     painter.fillRect(rect, QBrush(QColor(255, 255, 255, 200)));
     //painter.fillRect(rect, QBrush(Qt::cyan));
 
@@ -830,7 +929,9 @@ void GLWidget::printInfo() {
 
     //Вывод текущего режима
     QString modeName = "Mode: Draw";
-    if (mode == Draw) {
+    if (mode == View) {
+        modeName = "Mode: View";
+    } else if (mode == Draw) {
         modeName = "Mode: Draw";
     } else if (mode == Edit) {
         modeName = "Mode: Edit";
@@ -840,6 +941,8 @@ void GLWidget::printInfo() {
         modeName = "Mode: Demo2";
     } else if (mode == Demo3) {
         modeName = "Mode: Demo3";
+    } else if (mode == Demo4) {
+        modeName = "Mode: Demo4";
     }
 
     painter.drawText(QRect(l, t + h * 0, w, h), Qt::AlignLeft, modeName);
@@ -858,8 +961,8 @@ void GLWidget::printInfo() {
     painter.drawText(QRect(l, t + h * 3, w, h), Qt::AlignLeft, str_scale);
 
     //Текущий кадр
-    painter.drawText(QRect(l, t + h * 4, w, h), Qt::AlignLeft,
-                     "Timer: " + QString::number(elapsed));
+//    painter.drawText(QRect(l, t + h * 4, w, h), Qt::AlignLeft,
+//                     "Timer: " + QString::number(elapsed));
 }
 
 
@@ -910,6 +1013,16 @@ void GLWidget::mouseMoveEvent(QMouseEvent *me) {
                 activePoint = -1;
                 setCursor(Qt::ArrowCursor);
             }
+
+            if (activePoint == -1) {
+//                for (int i = 0; i < setOfPolygons[activePolygon].count() - 1; i++) {
+//                    Point addPoint = Tools::distOnSegment(setOfPolygons[activePolygon][i],
+//                                                    setOfPolygons[activePolygon][i + 1],
+//                                                    gPos, activationRadius);
+//                    painter.setPen(QPen(Qt::magenta, 10, Qt::SolidLine, Qt::RoundCap));
+//                    gPoint(addPoint);
+//                }
+            }
         }
     }
 }
@@ -926,7 +1039,9 @@ void GLWidget::mousePressEvent(QMouseEvent *me) {
                 setOfPolygons[activePolygon].removeLast();
             } else if (activePoint == 0) {
                 setOfPolygons[activePolygon].removeLast();
-                setMode(Edit);
+                activePoint = -1;
+                setMode(View);
+                endDraw();
             }
         }
 
@@ -951,6 +1066,12 @@ void GLWidget::mousePressEvent(QMouseEvent *me) {
             if (!setOfPolygons[activePolygon].isPolygon()) {
                 activePoint = -1;
             }
+        } else if (mode == Edit) {
+            if (activePoint != -1 && setOfPolygons[activePolygon].count() > 3) {
+                setOfPolygons[activePolygon].remove(activePoint);
+                activePoint = -1;
+                setCursor(Qt::ArrowCursor);
+            }
         }
     }
 }
@@ -973,6 +1094,7 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *me) {
 //Масштабирование
 void GLWidget::wheelEvent(QWheelEvent *me) {
     if (!move) {
+        double oldScale = gScale;
         gScale *= 1 + me->delta() / 1200.0;
 
         //Ограничения масштабирования
@@ -984,10 +1106,12 @@ void GLWidget::wheelEvent(QWheelEvent *me) {
             gScale = 1.0;
         }
 
-        //Вычисляем сдвиг
-        shiftView = Point((gPos.getX() * gScale - me->x()) * -1,
-                           gPos.getY() * gScale - widgetHeight + me->y());
-        gPos = toGPoint(Point::toPoint(me->pos()));
+        if (oldScale != gScale) {
+            //Вычисляем сдвиг
+            shiftView = Point((gPos.getX() * gScale - me->x()) * -1,
+                               gPos.getY() * gScale - widgetHeight + me->y());
+            gPos = toGPoint(Point::toPoint(me->pos()));
+        }
     }
 }
 
@@ -1002,5 +1126,5 @@ Point GLWidget::toGPoint(Point p) {
 }
 
 Point GLWidget::toGPoint(QPoint p) {
-    toGPoint(Point::toPoint(p));
+    return toGPoint(Point::toPoint(p));
 }

@@ -16,6 +16,7 @@ public:
     int count();
     void clear();
     void removeLast();
+    void remove(int i);
     Point center();
     QString toString();
     Point pointLabel(int i, double dist);

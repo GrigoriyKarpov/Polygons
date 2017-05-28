@@ -39,6 +39,8 @@ public:
 
     Point &operator= (const QPointF & p);
 
+    bool operator== (Point p);
+
     static Point toPoint(const QPointF & p);
 
     QString toString();
