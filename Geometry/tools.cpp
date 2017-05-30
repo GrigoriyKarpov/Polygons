@@ -174,6 +174,23 @@ bool Tools::segmentIntersect(Point a, Point b, Point c, Point d, Point *intersec
     return true;
 }
 
+int Tools::angleDirection(Point a, Point b, Point c) {
+    return sign((a.getX() * b.getY() + b.getX() * c.getY() + c.getX() * a.getY()) -
+                (a.getX() * c.getY() + b.getX() * a.getY() + c.getX() * b.getY()));
+}
+
+bool Tools::geometrySearch(Polygon pol, Point p) {
+    for (int i = 1; i < pol.count() - 1; i++) {
+        if (angleDirection(p, pol[0], pol[i + 1]) > 0 &&
+            angleDirection(p, pol[0], pol[i]) < 0 &&
+            angleDirection(pol[i], pol[i + 1], p) < 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 Polygon Tools::outCharArea(Polygon p1, Polygon p2, int o) {
     //1 Нормали многоугольников
     Polygon result;

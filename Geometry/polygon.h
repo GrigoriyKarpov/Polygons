@@ -13,6 +13,7 @@ public:
     Polygon(QVector<Point> points);
 
     void addPoint(Point p);
+    void insertPoint(int i, Point p);
     int count();
     void clear();
     void removeLast();

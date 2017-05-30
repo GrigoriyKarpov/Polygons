@@ -4,6 +4,7 @@
 #include "Geometry/tools.h"
 #include "Geometry/polygon.h"
 #include "Geometry/setofpolygons.h"
+#include "Geometry/point.h"
 #include <QGLWidget>
 #include <QBrush>
 #include <QFont>
@@ -24,6 +25,10 @@ public:
     void editPolygon(int i);
     void endEdit();
     bool activePolygonIsConvex();
+
+    void setDrawInChar(bool set);
+    void setDrawOutChar(bool set);
+    void setDrawGeometrySearch(bool set);
 
 public slots:
     void recieveOptions(QPen pen);
@@ -48,6 +53,14 @@ private:
 
     //Режим
     Modes mode;
+
+    bool drawInChar;
+    bool drawOutChar;
+    bool drawGeometrySearch;
+    Polygon::Polygon startPolygonPos;
+    Point startCursorPos;
+
+    int addPoint;
 
     //Навигация и управление
     //Текущее положение указателя мыши в мировых координатах
@@ -94,6 +107,8 @@ private:
     QPainter painter;
 
     QFont textFont;
+    QFont messageFont;
+
     QPen textPen;
     QPen polygonPen;
     QPen unacceptablePen;

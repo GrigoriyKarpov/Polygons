@@ -21,6 +21,10 @@ void Polygon::addPoint(Point p) {
     points.push_back(p);
 }
 
+void Polygon::insertPoint(int i, Point p) {
+    points.insert(i, p);
+}
+
 void Polygon::clear() {
     points.clear();
 }

@@ -11,6 +11,7 @@
 #include <QPen>
 #include <QListWidget>
 #include <QLabel>
+#include <QCheckBox>
 
 class Window : public QWidget
 {
@@ -34,6 +35,10 @@ public slots:
     void inCharBtnClick();
     void outCharBtnClick();
 
+    void inCharCBClick();
+    void outCharCBClick();
+    void geometrySearchCBClick();
+
 private:
     Dialog *dialog;
     GLWidget *widgetOpenGL;
@@ -48,6 +53,10 @@ private:
     QPushButton *viewBtn;
     QPushButton *inCharBtn;
     QPushButton *outCharBtn;
+
+    QCheckBox *inCharCB;
+    QCheckBox *outCharCB;
+    QCheckBox *geometrySearchCB;
 
     bool editBtnCheck;
 

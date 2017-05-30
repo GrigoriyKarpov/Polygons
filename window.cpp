@@ -16,7 +16,7 @@ Window::Window() : QWidget() {
     listOfPolygons->setMinimumWidth(200);
 
     lblList = new QLabel(QString::fromUtf8("Многоугольники:"));
-    lblMode = new QLabel(QString::fromUtf8("Режимы:"));
+    lblMode = new QLabel(QString::fromUtf8("Показать:"));
 
     addBtn = new QPushButton(QString::fromUtf8("Добавить"));
     editBtn = new QPushButton(QString::fromUtf8("Изменить"));
@@ -24,6 +24,10 @@ Window::Window() : QWidget() {
     removeBtn = new QPushButton(QString::fromUtf8("Удалить"));
     editBtn->setEnabled(false);
     removeBtn->setEnabled(false);
+
+    inCharCB = new QCheckBox(QString::fromUtf8("Внутренняя характеристическая область"));
+    outCharCB = new QCheckBox(QString::fromUtf8("Внешняя характеристическая область"));
+    geometrySearchCB = new QCheckBox(QString::fromUtf8("Геометрический поиск"));
 
     viewBtn = new QPushButton(QString::fromUtf8("Обзор"));
     viewBtn->setCheckable(true);
@@ -40,9 +44,10 @@ Window::Window() : QWidget() {
     polygonBtnsLayout->addWidget(removeBtn);
 
     demoBtnsLayout = new QVBoxLayout;
-    demoBtnsLayout->addWidget(viewBtn);
-    demoBtnsLayout->addWidget(inCharBtn);
-    demoBtnsLayout->addWidget(outCharBtn);
+    demoBtnsLayout->addWidget(lblMode);
+    demoBtnsLayout->addWidget(inCharCB);
+    demoBtnsLayout->addWidget(outCharCB);
+    demoBtnsLayout->addWidget(geometrySearchCB);
 
     optionsLayout = new QVBoxLayout;
     optionsLayout->addWidget(lblList);
@@ -60,13 +65,16 @@ Window::Window() : QWidget() {
 
     setLayout(mainlayout);
 
-    connect(viewBtn, SIGNAL(clicked()), this, SLOT(viewBtnClick()));
     connect(addBtn, SIGNAL(clicked()), this, SLOT(addBtnClick()));
     connect(editBtn, SIGNAL(clicked()), this, SLOT(editBtnClick()));
     connect(removeBtn, SIGNAL(clicked()), this, SLOT(removeBtnClick()));
     connect(widgetOpenGL, SIGNAL(endDraw()), this, SLOT(endDraw()));
-    connect(inCharBtn, SIGNAL(clicked()), this, SLOT(inCharBtnClick()));
-    connect(outCharBtn, SIGNAL(clicked()), this, SLOT(outCharBtnClick()));
+//    connect(viewBtn, SIGNAL(clicked()), this, SLOT(viewBtnClick()));
+//    connect(inCharBtn, SIGNAL(clicked()), this, SLOT(inCharBtnClick()));
+//    connect(outCharBtn, SIGNAL(clicked()), this, SLOT(outCharBtnClick()));
+    connect(inCharCB, SIGNAL(clicked()), this, SLOT(inCharCBClick()));
+    connect(outCharCB, SIGNAL(clicked()), this, SLOT(outCharCBClick()));
+    connect(geometrySearchCB, SIGNAL(clicked()), this, SLOT(geometrySearchCBClick()));
 
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), widgetOpenGL, SLOT(animate()));
@@ -173,6 +181,18 @@ void Window::outCharBtnClick() {
     inCharBtn->setChecked(false);
     viewBtn->setChecked(false);
     widgetOpenGL->setMode(GLWidget::Demo3);
+}
+
+void Window::inCharCBClick() {
+    widgetOpenGL->setDrawInChar(inCharCB->isChecked());
+}
+
+void Window::outCharCBClick() {
+    widgetOpenGL->setDrawOutChar(outCharCB->isChecked());
+}
+
+void Window::geometrySearchCBClick() {
+    widgetOpenGL->setDrawGeometrySearch(geometrySearchCB->isChecked());
 }
 
 void Window::moveToCenter() {

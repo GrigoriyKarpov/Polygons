@@ -17,6 +17,8 @@ public:
     static double slope(Point a, Point b);
     static bool lineIntersect(Point a, Point b, Point c, Point d, Point *p);
     static bool segmentIntersect(Point a, Point b, Point c, Point d, Point *p);
+    static int angleDirection(Point a, Point b, Point c);
+    static bool geometrySearch(Polygon pol, Point p);
     static Polygon outCharArea(Polygon p1, Polygon p2, int o);
     static Polygon inCharArea(Polygon p1, Polygon p2, int o);
     static Point center(Point a, Point b);
