@@ -302,7 +302,6 @@ Polygon Tools::inCharArea(Polygon p1, Polygon p2, int o) {
     QVector<Vector> n;
     QVector<Vector> m;
 
-    //Внутр
     for (int i = 0; i < p1.count(); i++) {
         int j = i + 1;
         if (i == p1.count() - 1) {
@@ -311,7 +310,6 @@ Polygon Tools::inCharArea(Polygon p1, Polygon p2, int o) {
         n.push_back(Vector::normal(p1[j], p1[i]));
     }
 
-    //Внешние нормали
     for (int i = 0; i < p2.count(); i++) {
         int j = i + 1;
         if (i == p2.count() - 1) {
@@ -338,11 +336,9 @@ Polygon Tools::inCharArea(Polygon p1, Polygon p2, int o) {
                 l = p2.count() - 1;
             }
 
-            //Находим углы
             double a1 = n[i].cos(Vector(p2[k], p2[t]));
             double a2 = n[i].cos(Vector(p2[k], p2[l]));
 
-            //Находим вершину, которая может скользить
             if (a1 >= 0 && a2 >= 0) {
                 Point v1 = p1[i];
                 v1 = Vector(p2[k], p2[o]).translate(v1);

@@ -18,6 +18,10 @@ public:
     void clear();
     void removeLast();
     void remove(int i);
+
+
+    void rotate(double a);
+
     Point center();
     QString toString();
     Point pointLabel(int i, double dist);

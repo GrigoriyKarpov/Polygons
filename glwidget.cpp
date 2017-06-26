@@ -54,6 +54,11 @@ GLWidget::GLWidget(QWidget *parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), p
     rightBtn = false;
     showLog = true;
 
+    convex = true;
+
+    rotate = false;
+    rotateCursor = QCursor(QPixmap(":/cursor/rotateCursor.png"), 7, 7);
+
     drawInChar = false;
     drawOutChar = false;
     drawGeometrySearch = false;
@@ -103,11 +108,12 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         polygon.push_back(Point(50.0, 130.0));
         polygon.push_back(Point(130.0, 130.0));
         polygon.push_back(Point(160.0, 80.0));
+        polygon.push_back(Point(200.0, -50.0));
 
         double h  = 100.0;   //Длина скользящего отрезка
         double d1 = 0.0;     //Раст от верш. скользящего отрезка до основания перпендикуляра
-        double d2 = 300.0;   //Длина перпендикуляра
-        double speed = 1.0;  //Коэффициент скорости анимации
+        double d2 = 100.0;   //Длина перпендикуляра
+        double speed = 0.6;  //Коэффициент скорости анимации
 
         Point r;
         Point q;
@@ -518,9 +524,120 @@ void GLWidget::paintEvent(QPaintEvent *event) {
             }
 
             if (drawInChar || drawGeometrySearch) {
-                gPolygon(Tools::inCharArea(setOfPolygons[0], setOfPolygons[1], 0),
-                         QPen(QColor(90, 90, 255, 255), 2, Qt::SolidLine, Qt::RoundCap),
-                         QBrush(QColor(90, 90, 255, 255), Qt::BDiagPattern));
+                if (setOfPolygons[0].isConvex()) {
+                    gPolygon(Tools::inCharArea(setOfPolygons[0], setOfPolygons[1], 0),
+                             QPen(QColor(90, 90, 255, 255), 2, Qt::SolidLine, Qt::RoundCap),
+                             QBrush(QColor(90, 90, 255, 255), Qt::BDiagPattern));
+                } else {
+                    gPolygon(Tools::inCharArea(setOfPolygons[0], setOfPolygons[1], 0),
+                             QPen(QColor(90, 90, 255, 255), 2, Qt::SolidLine, Qt::RoundCap),
+                             QBrush(QColor(90, 90, 255, 255), Qt::BDiagPattern));
+
+                    QVector<Vector> n;
+                    QVector<Vector> m;
+
+                    //Внутр диагонали неподвижного
+                    for (int i = 0; i < setOfPolygons[0].count(); i++) {
+                        int j = i + 1;
+                        if (i == setOfPolygons[0].count() - 1) {
+                            j = 0;
+                        }
+                        n.push_back(Vector::normal(setOfPolygons[0][j], setOfPolygons[0][i]));
+//                        gVector(Tools::center(setOfPolygons[0][j], setOfPolygons[0][i]), n[i]);
+                    }
+
+                    //Внешние диагонали подвижного
+                    for (int i = 0; i < setOfPolygons[1].count(); i++) {
+                        int j = i + 1;
+                        if (i == setOfPolygons[1].count() - 1) {
+                            j = 0;
+                        }
+
+                        m.push_back(Vector::normal(setOfPolygons[1][i], setOfPolygons[1][j]));
+//                        gVector(Tools::center(setOfPolygons[1][j], setOfPolygons[1][i]), m[i]);
+                    }
+
+
+                    //Вектора движения
+                    QVector<Point> charPoints;
+                    int o = 0;
+
+                    for (int i = 0; i < n.count(); i++) {
+                        int j = i + 1;
+                        if (i == n.count() - 1) {
+                            j = 0;
+                        }
+
+                        for (int k = 0; k < setOfPolygons[1].count(); k++) {
+                            int t = k + 1;
+                            if (k == setOfPolygons[1].count() - 1) {
+                                t = 0;
+                            }
+                            int l = k - 1;
+                            if (k == 0) {
+                                l = setOfPolygons[1].count() - 1;
+                            }
+
+                            double a1 = n[i].cos(Vector(setOfPolygons[1][k], setOfPolygons[1][t]));
+                            double a2 = n[i].cos(Vector(setOfPolygons[1][k], setOfPolygons[1][l]));
+
+                            //Вершина p2[k] может скользить по ребру с нормалью n[i]
+                            if (a1 >= 0 && a2 >= 0) {
+                                Point v1 = setOfPolygons[0][i];
+                                v1 = Vector(setOfPolygons[1][k], setOfPolygons[1][o]).translate(v1);
+                                Point v2 = setOfPolygons[0][j];
+                                v2 = Vector(setOfPolygons[1][k], setOfPolygons[1][o]).translate(v2);
+
+                                charPoints.push_back(v1);
+                                charPoints.push_back(v2);
+
+                                painter.setPen(QPen(Qt::green, 2, Qt::SolidLine, Qt::RoundCap));
+                                gLine(v1, v2);
+
+                                break;
+                            }
+                        }
+                    }
+
+                    /*
+                    Polygon::Polygon inter;
+
+                    for (int i = 0; i < charPoints.count(); i += 2) {
+                        int j = i + 1;
+                        int k = i + 2;
+                        int t = i + 3;
+
+                        if (i == charPoints.count() - 1) {
+                            j = 0;
+                            k = 1;
+                            t = 2;
+                        }
+                        if (i == charPoints.count() - 2) {
+                            k = 0;
+                            t = 1;
+                        }
+                        if (i == charPoints.count() - 3) {
+                            t = 0;
+                        }
+
+                        Point res;
+
+                        if (Tools::segmentIntersect(charPoints[i], charPoints[j],
+                                                    charPoints[k], charPoints[t], &res)) {
+                            inter.addPoint(res);
+                        }
+
+                        int m = t + 1;
+                        if (t == charPoints.count() - 1) {
+                            m = 0;
+                        }
+                        if (charPoints[t] == charPoints[m]) {
+                            inter.addPoint(charPoints[t]);
+                        }
+                    }
+
+                    return inter;*/
+                }
             }
 
             if (drawGeometrySearch) {
@@ -572,7 +689,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         }
 
         //Сообщение о невыпуклости полигона
-        if (!setOfPolygons[activePolygon].isConvex()) {
+        if (convex && !setOfPolygons[activePolygon].isConvex()) {
             QString errorMessage = QString::fromUtf8("Предупреждение: полигон невыпуклый!");
             painter.setPen(QPen(QColor(225, 64, 64)));
             painter.setFont(messageFont);
@@ -593,7 +710,7 @@ void GLWidget::paintEvent(QPaintEvent *event) {
         setOfPolygons[activePolygon].addPoint(gPos);
         gPolygon(setOfPolygons[activePolygon], false);
 
-        if (setOfPolygons[activePolygon].isPolygon() && !setOfPolygons[activePolygon].isConvex()) {
+        if (convex && setOfPolygons[activePolygon].isPolygon() && !setOfPolygons[activePolygon].isConvex()) {
             QString errorMessage = QString::fromUtf8("Предупреждение: полигон невыпуклый!");
             painter.setPen(QPen(QColor(225, 64, 64)));
             painter.setFont(messageFont);
@@ -691,7 +808,10 @@ void GLWidget::endEdit() {
 }
 
 bool GLWidget::activePolygonIsConvex() {
-    return setOfPolygons[activePolygon].isConvex();
+    if (!convex || (convex && setOfPolygons[activePolygon].isConvex())) {
+        return true;
+    }
+    return false;
 }
 
 void GLWidget::setDrawInChar(bool set) {
@@ -704,6 +824,18 @@ void GLWidget::setDrawOutChar(bool set) {
 
 void GLWidget::setDrawGeometrySearch(bool set) {
     drawGeometrySearch = set;
+}
+
+void GLWidget::setRotate(bool set) {
+    rotate = set;
+}
+
+QString GLWidget::getPolygonXML(int i) {
+    return setOfPolygons.getXML(i);
+}
+
+void GLWidget::addPolygonFromXML(Polygon::Polygon p, QString name) {
+    setOfPolygons.add(p, name);
 }
 
 QPen GLWidget::getPolygonPen() {
@@ -734,16 +866,39 @@ void GLWidget::gVector(Vector v) {
 }
 
 void GLWidget::gVector(Point s, Point v) {
-    QPolygon p;
-    double arrow_widgetWidth = 50.0;
-    double arrow_len = 100.0;
+    painter.setPen(polygonPen);
+
+    v += s;
+    gLine(s, v);
+
+    //Стрелка
+    /*QPolygon p;
+    double arrow_widgetWidth = 5.0;
+    double arrow_len = 15.0;
 
     p << QPoint( 0, -arrow_widgetWidth );
     p << QPoint( -arrow_len, 0 );
     p << QPoint( 0, arrow_widgetWidth );
 
-    v += s;
-    gLine(s, v);
+
+    QMatrix matrix;
+    matrix.rotate(45);
+    p = matrix.map(p);
+    p.translate(v.getX() + arrow_len, v.getY());
+
+
+
+    QPolygon area;
+    for (int i = 0; i < p.count(); i++) {
+        area << QPoint(p[i].x() * gScale + shiftView.getX(),
+                     widgetHeight - p[i].y() * gScale + shiftView.getY());
+    }
+
+    //painter.drawConvexPolygon(area);
+
+    QPainterPath areaPath;
+    areaPath.addPolygon(area);
+    painter.fillPath(areaPath, QBrush(Qt::black));*/
 }
 
 void GLWidget::gVector(Point s, Vector v) {
@@ -797,7 +952,7 @@ void GLWidget::gPolygon(Polygon::Polygon p, bool close, QString name, QPen pen) 
         for (int i = 0; i < p.count() - 1; i++) {
             painter.setPen(pen);
 
-            if (!p.isConvex() && !close && i == p.count() - 2) {
+            if (convex && !p.isConvex() && !close && i == p.count() - 2) {
                 painter.setPen(unacceptablePen);
             }
 
@@ -1050,7 +1205,11 @@ void GLWidget::mouseMoveEvent(QMouseEvent *me) {
                         activePolygon = i;
                         gPos = setOfPolygons[activePolygon].center();
 
-                        setCursor(Qt::OpenHandCursor);
+                        if (rotate) {
+                            setCursor(rotateCursor);
+                        } else {
+                            setCursor(Qt::OpenHandCursor);
+                        }
 
                         break;
                     } else {
@@ -1061,8 +1220,21 @@ void GLWidget::mouseMoveEvent(QMouseEvent *me) {
             }
 
             if (leftBtn && activePolygon != -1) {
-                for (int i = 0; i < setOfPolygons[activePolygon].count(); i++) {
-                    setOfPolygons[activePolygon][i] = startPolygonPos[i] + gPos - startCursorPos;
+                if (rotate) {
+                    setOfPolygons[activePolygon].rotate((startCursorPos.getX() - gPos.getX()) / 100.0);
+
+                    /*QRect screen = QApplication::desktop()->screenGeometry();
+                    if (cursor().pos().x() == screen.width() - 1) {
+                        SetCursorPos(0, cursor().pos().y());
+                    } else if (cursor().pos().x() == 0) {
+                        SetCursorPos(screen.width() - 1, cursor().pos().y());
+                    }*/
+
+                    startCursorPos = gPos;
+                } else {
+                    for (int i = 0; i < setOfPolygons[activePolygon].count(); i++) {
+                        setOfPolygons[activePolygon][i] = startPolygonPos[i] + gPos - startCursorPos;
+                    }
                 }
             }
         } else if (mode == Draw) {
@@ -1148,14 +1320,19 @@ void GLWidget::mousePressEvent(QMouseEvent *me) {
         leftBtn = true;
         if (mode == View) {
            if (activePolygon != -1) {
-               setCursor(Qt::ClosedHandCursor);
+               if (rotate) {
+                   setCursor(rotateCursor);
+               } else {
+                   setCursor(Qt::ClosedHandCursor);
+               }
+
                startPolygonPos = setOfPolygons[activePolygon];
                startCursorPos = gPos;
            }
         } else if (mode == Draw) {
             setOfPolygons[activePolygon].addPoint(gPos);
 
-            if (!setOfPolygons[activePolygon].isConvex() && setOfPolygons[activePolygon].isPolygon()) {
+            if (convex && !setOfPolygons[activePolygon].isConvex() && setOfPolygons[activePolygon].isPolygon()) {
                 setOfPolygons[activePolygon].removeLast();
             } else if (activePoint == 0) {
                 setOfPolygons[activePolygon].removeLast();
@@ -1223,7 +1400,11 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *me) {
 
         if (mode == View) {
            if (activePolygon != -1) {
-               setCursor(Qt::OpenHandCursor);
+               if (rotate) {
+                   setCursor(rotateCursor);
+               } else {
+                   setCursor(Qt::OpenHandCursor);
+               }
            }
         } else if (mode == Edit) {
             if (activePoint != -1) {

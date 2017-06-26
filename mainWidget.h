@@ -1,8 +1,7 @@
-#ifndef WINDOW_H
-#define WINDOW_H
+#ifndef MAINWIDGET_H
+#define MAINWIDGET_H
 
 #include "glwidget.h"
-#include "dialog.h"
 
 #include <QWidget>
 #include <QPushButton>
@@ -12,14 +11,16 @@
 #include <QListWidget>
 #include <QLabel>
 #include <QCheckBox>
+#include <QAction>
+#include <QMenu>
+#include <QGroupBox>
+#include <QRadioButton>
 
-class Window : public QWidget
-{
+class MainWidget : public QWidget {
     Q_OBJECT
 
 public:
-    Window();
-    void moveToCenter();
+    MainWidget(QWidget *parent = 0);
 
 signals:
     void sendOptions(QPen pen);
@@ -37,10 +38,16 @@ public slots:
 
     void inCharCBClick();
     void outCharCBClick();
+
+    void moveRadioClick();
+    void rotateRadioClick();
+
     void geometrySearchCBClick();
 
+    void saveToFile();
+    void loadFromFile();
+
 private:
-    Dialog *dialog;
     GLWidget *widgetOpenGL;
     QListWidget *listOfPolygons;
 
@@ -54,17 +61,26 @@ private:
     QPushButton *inCharBtn;
     QPushButton *outCharBtn;
 
+    QPushButton *saveBtn;
+    QPushButton *openBtn;
+
     QCheckBox *inCharCB;
     QCheckBox *outCharCB;
     QCheckBox *geometrySearchCB;
 
     bool editBtnCheck;
 
+    QGroupBox    *moveOrRotateGB;
+    QRadioButton *moveRadio;
+    QRadioButton *rotateRadio;
+
+    QHBoxLayout *saveBtnsLayout;
     QHBoxLayout *polygonBtnsLayout;
     QHBoxLayout *widgetsLayout;
     QVBoxLayout *demoBtnsLayout;
     QVBoxLayout *optionsLayout;
     QVBoxLayout *mainlayout;
+    QVBoxLayout *moveOrRotateLayout;
 };
 
 #endif

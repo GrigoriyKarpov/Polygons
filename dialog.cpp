@@ -1,5 +1,5 @@
 #include "dialog.h"
-#include "window.h"
+#include "mainWidget.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>

@@ -32,6 +32,7 @@ public:
 
     QString getName(int i);
     QPen getPen(int i);
+    QString getXML(int i);
 
     int count();
 

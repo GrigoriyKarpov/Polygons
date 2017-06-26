@@ -2,6 +2,8 @@
 #include "vector.h"
 #include "tools.h"
 
+#include <qmath.h>
+
 Polygon::Polygon() {
 }
 
@@ -35,6 +37,17 @@ void Polygon::removeLast() {
 
 void Polygon::remove(int i) {
     points.remove(i);
+}
+
+void Polygon::rotate(double a) {
+    Point c = center();
+    for (int i = 0; i < points.count(); i++) {
+        double x = points[i].getX() - c.getX();
+        double y = points[i].getY() - c.getY();
+
+        points[i].setX(x * qCos(a) - y * qSin(a) + c.getX());
+        points[i].setY(y * qCos(a) + x * qSin(a) + c.getY());
+    }
 }
 
 QString Polygon::toString() {

@@ -29,6 +29,10 @@ public:
     void setDrawInChar(bool set);
     void setDrawOutChar(bool set);
     void setDrawGeometrySearch(bool set);
+    void setRotate(bool set);
+
+    QString getPolygonXML(int i);
+    void addPolygonFromXML(Polygon::Polygon p, QString name);
 
 public slots:
     void recieveOptions(QPen pen);
@@ -61,6 +65,8 @@ private:
     Point startCursorPos;
 
     int addPoint;
+
+    bool convex;
 
     //Навигация и управление
     //Текущее положение указателя мыши в мировых координатах
@@ -102,6 +108,9 @@ private:
     bool crossroad;
     bool shortEdge;
     bool showLog;
+    bool rotate;
+
+    QCursor rotateCursor;
 
     //Рисование
     QPainter painter;

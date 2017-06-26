@@ -59,6 +59,22 @@ QPen SetOfPolygons::getPen(int i){
     return pens[i];
 }
 
+QString SetOfPolygons::getXML(int i) {
+    QString result = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<polygon>\n";
+    result += "\t<name>" + names[i] + "</name>\n";
+
+    //----------------Точки-------------------
+    result += "\t<points>\n";
+    for (int j = 0; j < set[i].count(); j++) {
+        result += "\t\t<point>\n\t\t\t<x>" + QString().sprintf("%f", set[i][j].getX()) + "</x>\n";
+        result += "\t\t\t<y>" + QString().sprintf("%f", set[i][j].getY()) + "</y>\n\t\t</point>\n";
+    }
+    result += "\t</points>\n";
+
+    result += "</polygon>";
+    return result;
+}
+
 int SetOfPolygons::count() {
     return set.count();
 }

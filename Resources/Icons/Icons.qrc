@@ -23,4 +23,7 @@
         <file>4.png</file>
         <file>5.png</file>
     </qresource>
+    <qresource prefix="/cursor">
+        <file>rotateCursor.png</file>
+    </qresource>
 </RCC>
